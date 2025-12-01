@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Room - Real-Time Quiz</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom scrollbar untuk chat */
+    .chat-container::-webkit-scrollbar { width: 6px; }
+    .chat-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+    .chat-container::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+    .chat-container::-webkit-scrollbar-thumb:hover { background: #555; }
+
+    /* Small helpers */
+    .no-select { user-select: none; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <!-- Container Utama -->
+  <div class="container mx-auto p-4 max-w-7xl">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg shadow-lg p-4 mb-4 text-white">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-2xl font-bold">🎯 Room Quiz</h1>
+          <p class="text-sm opacity-90">Kode: <span id="roomCodeDisplay" class="font-bold text-yellow-300 text-lg">---</span></p>
+        </div>
+        <div class="text-right">
+          <p class="text-sm opacity-90">Username:</p>
+          <p class="font-bold text-lg" id="usernameDisplay">---</p>
+        </div>
+      </div>
+      <div class="mt-2 text-sm">
+        <span id="connectionStatus">🔌 Menghubungkan...</span>
+      </div>
+    </div>
+
+    <!-- Layout 2 Kolom -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+      <!-- KOLOM KIRI: Players + Chat -->
+      <div class="lg:col-span-1 space-y-4">
+
+        <!-- PLAYER LIST -->
+        <div class="bg-white rounded-lg shadow-lg p-4">
+          <h2 class="text-xl font-bold mb-3 flex items-center">
+            <span class="text-2xl mr-2">👥</span>
+            Pemain Online
+            <span id="playerCount" class="ml-auto bg-blue-500 text-white px-3 py-1 rounded-full text-sm">0</span>
+          </h2>
+          <div id="playerList" class="space-y-2">
+            <!-- Player items akan diisi oleh JavaScript -->
+          </div>
+        </div>
+
+        <!-- CHAT BOX -->
+        <div class="bg-white rounded-lg shadow-lg p-4">
+          <h2 class="text-xl font-bold mb-3 flex items-center">
+            <span class="text-2xl mr-2">💬</span>
+            Chat Room
+          </h2>
+
+          <!-- Chat Messages -->
+          <div id="chatMessages" class="chat-container h-64 overflow-y-auto mb-3 bg-gray-50 rounded-lg p-3 space-y-2">
+            <p class="text-gray-400 text-sm text-center">Belum ada pesan...</p>
+          </div>
+
+          <!-- Chat Input -->
+          <div class="flex gap-2">
+            <input
+              type="text"
+              id="chatInput"
+              placeholder="Ketik pesan..."
+              maxlength="200"
+              class="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+            />
+            <button id="sendChatBtn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-semibold">Kirim</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- KOLOM KANAN: Quiz Area -->
+      <div class="lg:col-span-2">
+
+        <!-- WAITING STATE -->
+        <div id="waitingState" class="bg-white rounded-lg shadow-lg p-8 text-center">
+          <div class="text-6xl mb-4">⏳</div>
+          <h2 class="text-2xl font-bold text-gray-800 mb-2">Menunggu Quiz Dimulai...</h2>
+          <p class="text-gray-600 mb-6">Host akan memulai quiz sebentar lagi</p>
+
+          <!-- Host Controls -->
+          <div id="hostControls" class="hidden">
+            <button id="startQuizBtn" class="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-4 rounded-lg hover:from-green-600 hover:to-green-700 transition font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105">🚀 Mulai Quiz</button>
+            <p class="text-sm text-gray-500 mt-3">Anda adalah Host. Klik tombol di atas untuk memulai quiz.</p>
+          </div>
+
+          <div id="playerWaiting" class="hidden">
+            <p class="text-gray-500">Tunggu host memulai quiz...</p>
+          </div>
+        </div>
+
+        <!-- QUIZ STATE -->
+        <div id="quizState" class="hidden bg-white rounded-lg shadow-lg p-6">
+
+          <!-- Quiz Header -->
+          <div class="flex justify-between items-center mb-4 pb-4 border-b-2">
+            <div>
+              <p class="text-sm text-gray-500">Pertanyaan</p>
+              <p class="text-2xl font-bold text-purple-600"><span id="questionNumber">1</span> / <span id="totalQuestions">5</span></p>
+            </div>
+            <div class="text-right">
+              <p class="text-sm text-gray-500">Waktu Tersisa</p>
+              <p id="timer" class="text-4xl font-bold text-red-500">15</p>
+            </div>
+          </div>
+
+          <!-- Question -->
+          <div class="mb-6">
+            <h3 id="questionText" class="text-2xl font-bold text-gray-800 mb-4">Loading question...</h3>
+          </div>
+
+          <!-- Options -->
+          <div id="optionsContainer" class="space-y-3 mb-6">
+            <!-- Options akan diisi oleh JavaScript -->
+          </div>
+
+          <!-- Submit Answer Status -->
+          <div id="answerStatus" class="hidden p-4 rounded-lg mb-4"></div>
+
+          <!-- Host Next Button -->
+          <div id="hostNextBtn" class="hidden text-center">
+            <button id="nextQuestionBtn" class="bg-blue-500 text-white px-8 py-3 rounded-lg hover:bg-blue-600 transition font-bold shadow-lg">Soal Berikutnya →</button>
+          </div>
+
+        </div>
+
+        <!-- FINISHED STATE -->
+        <div id="finishedState" class="hidden bg-white rounded-lg shadow-lg p-8">
+
+          <div class="text-center mb-6">
+            <div class="text-6xl mb-4">🏆</div>
+            <h2 class="text-3xl font-bold text-gray-800 mb-2">Quiz Selesai!</h2>
+            <p class="text-gray-600">Terima kasih sudah bermain</p>
+          </div>
+
+          <!-- Leaderboard Final -->
+          <div class="mb-6">
+            <h3 class="text-xl font-bold mb-3 text-center">🥇 Leaderboard Final</h3>
+            <div id="finalLeaderboard" class="space-y-2"></div>
+          </div>
+
+          <!-- Review Button -->
+          <div class="text-center">
+            <button id="viewReviewBtn" class="bg-purple-500 text-white px-6 py-3 rounded-lg hover:bg-purple-600 transition font-bold">📊 Lihat Review Jawaban Saya</button>
+          </div>
+
+        </div>
+
+        <!-- REVIEW STATE -->
+        <div id="reviewState" class="hidden bg-white rounded-lg shadow-lg p-6">
+
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">📊 Review Jawaban Anda</h2>
+            <button id="backToLeaderboardBtn" class="text-blue-600 hover:text-blue-800 underline">← Kembali ke Leaderboard</button>
+          </div>
+
+          <!-- Review Summary -->
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 mb-6">
+            <div class="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p class="text-sm text-gray-600">Total Skor</p>
+                <p id="reviewScore" class="text-3xl font-bold text-purple-600">0</p>
+              </div>
+              <div>
+                <p class="text-sm text-gray-600">Benar</p>
+                <p id="reviewCorrect" class="text-3xl font-bold text-green-600">0</p>
+              </div>
+              <div>
+                <p class="text-sm text-gray-600">Salah</p>
+                <p id="reviewWrong" class="text-3xl font-bold text-red-600">0</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Review Questions -->
+          <div id="reviewQuestions" class="space-y-4"></div>
+
+        </div>
+
+        <!-- REALTIME LEADERBOARD (Sidebar) -->
+        <div id="realtimeLeaderboard" class="hidden bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg shadow-lg p-6 mt-4">
+          <h3 class="text-xl font-bold mb-4 flex items-center"><span class="text-2xl mr-2">🏆</span>Leaderboard Sementara</h3>
+          <div id="leaderboardList" class="space-y-2"></div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Leave Room Button -->
+    <div class="mt-4 text-center">
+      <button id="leaveRoomBtn" class="text-red-600 hover:text-red-800 underline font-semibold">🚪 Keluar dari Room</button>
+    </div>
+
+  </div>
+
+  <!-- Optional: external WebSocket helper (jika ada) -->
+  <!-- <script src="/js/ws-client.js"></script> -->
+
+  <script>
+    /* =====================================================
+       Real-time Quiz Room - Client Script (rapi & lengkap)
+       - Semua fungsi dijelaskan singkat di komentar
+       - Menggunakan WebSocket standar
+       ===================================================== */
+
+    // ======= GLOBAL VARS =======
+    let ws = null;
+    let clientId = null;
+    let username = null;
+    let roomCode = null;
+    let isHost = false;
+    let isConnected = false;
+
+    // Quiz state
+    let currentQuizState = 'waiting'; // 'waiting' | 'quiz' | 'finished' | 'review'
+    let currentQuestion = null;
+    let questionStartTime = null;
+    let timerInterval = null;
+    let hasAnswered = false;
+
+    // Data
+    let players = [];
+    let chatMessages = [];
+    let myReviewData = null;
+
+    // Simple reconnect backoff (ms)
+    const RECONNECT_DELAY = 3000;
+
+    // ======= HELPERS =======
+    function escapeHtml(text = '') {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function byId(id) { return document.getElementById(id); }
+
+    // ===================================
+// INITIALIZATION
+// ===================================
+  function init() {
+    // Ambil data dari localStorage
+    username = localStorage.getItem('username');
+    roomCode = localStorage.getItem('currentRoomCode');
+    isHost = localStorage.getItem('isHost') === 'true';
+    clientId = localStorage.getItem('clientId');
+
+    console.log('🔧 Init room.html:', { username, roomCode, isHost, clientId });
+
+    // Validasi
+    if (!username || !roomCode) {
+      alert('❌ Data tidak lengkap! Redirect ke lobby...');
+      window.location.href = '/lobby.html';
+      return;
+    }
+
+    // Tampilkan info
+    document.getElementById('usernameDisplay').textContent = username;
+    document.getElementById('roomCodeDisplay').textContent = roomCode;
+
+    // Initially show controls based on localStorage (will be updated after room-data)
+    if (isHost) {
+      document.getElementById('hostControls').classList.remove('hidden');
+      document.getElementById('playerWaiting').classList.add('hidden');
+    } else {
+      document.getElementById('hostControls').classList.add('hidden');
+      document.getElementById('playerWaiting').classList.remove('hidden');
+    }
+
+    // Inisialisasi WebSocket
+    initWebSocket();
+  }
+    // ======= WEBSOCKET SETUP =======
+    function initWebSocket() {
+      try {
+        ws = new WebSocket('ws://localhost:3001');
+      } catch (err) {
+        console.error('❌ Gagal membuat WebSocket:', err);
+        byId('connectionStatus').innerHTML = '❌ <span class="font-semibold text-red-300">Gagal koneksi</span>';
+        // Coba reconnect
+        setTimeout(initWebSocket, RECONNECT_DELAY);
+        return;
+      }
+
+      ws.onopen = () => {
+        console.log('✅ WebSocket connected');
+        isConnected = true;
+        byId('connectionStatus').innerHTML = '✅ <span class="font-semibold">Terhubung</span>';
+
+        // Minta data room setelah connect (beri sedikit jeda agar server siap)
+        setTimeout(() => sendMessage('get-room-data', { roomCode, username }), 500);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const { type, data } = JSON.parse(event.data);
+          console.log('📩 Received:', type, data);
+          handleMessage(type, data);
+        } catch (error) {
+          console.error('❌ Error parsing message:', error, event.data);
+        }
+      };
+
+      ws.onclose = (ev) => {
+        console.log('❌ WebSocket disconnected', ev);
+        isConnected = false;
+        byId('connectionStatus').innerHTML = '❌ <span class="font-semibold text-red-300">Terputus</span>';
+        // Auto reconnect
+        setTimeout(() => {
+          console.log('🔄 Reconnecting...');
+          initWebSocket();
+        }, RECONNECT_DELAY);
+      };
+
+      ws.onerror = (error) => {
+        console.error('❌ WebSocket error:', error);
+      };
+    }
+
+    // ======= MESSAGE HANDLER =======
+    function handleMessage(type, data) {
+      switch (type) {
+        case 'connected':
+          clientId = data.clientId;
+          localStorage.setItem('clientId', clientId);
+          break;
+
+        case 'room-data':
+          players = data.room.players || [];
+          chatMessages = data.room.chat || [];
+          updatePlayerList();
+          updateChatMessages();
+
+          // Update host status
+          isHost = data.isHost;
+          localStorage.setItem('isHost', isHost ? 'true' : 'false');
+
+          // Show/hide host controls
+          if (isHost) {
+            byId('hostControls').classList.remove('hidden');
+            byId('playerWaiting').classList.add('hidden');
+          } else {
+            byId('hostControls').classList.add('hidden');
+            byId('playerWaiting').classList.remove('hidden');
+          }
+
+          if (data.room.quiz && data.room.quiz.status === 'playing') {
+            switchState('quiz');
+            byId('realtimeLeaderboard').classList.remove('hidden');
+          } else if (data.room.quiz && data.room.quiz.status === 'finished') {
+            switchState('finished');
+          }
+          break;
+
+        case 'player-joined':
+          players = data.players || [];
+          updatePlayerList();
+          addSystemMessage(`${data.username} bergabung ke room`);
+          break;
+
+        case 'player-left':
+          players = data.players || [];
+          updatePlayerList();
+          addSystemMessage(`${data.username} keluar dari room`);
+          break;
+
+        case 'new-host':
+          addSystemMessage(`${data.hostUsername} sekarang menjadi host`);
+          if (data.hostClientId === clientId) {
+            isHost = true;
+            localStorage.setItem('isHost', 'true');
+            // Show host controls without reloading the page
+            byId('hostControls').classList.remove('hidden');
+            byId('playerWaiting').classList.add('hidden');
+          }
+          break;
+
+        case 'new-chat':
+          addChatMessage(data.username, data.message, data.timestamp);
+          break;
+
+        case 'quiz-started':
+          addSystemMessage('🎯 Quiz dimulai! Bersiap...');
+          setTimeout(() => {
+            switchState('quiz');
+            byId('realtimeLeaderboard').classList.remove('hidden');
+          }, 800);
+          break;
+
+        case 'new-question':
+          displayQuestion(data);
+          break;
+
+        case 'answer-submitted':
+          showAnswerResult(data);
+          break;
+
+        case 'leaderboard-update':
+          updateLeaderboard(data.leaderboard || []);
+          break;
+
+        case 'quiz-finished':
+          displayFinalLeaderboard(data.leaderboard || []);
+          switchState('finished');
+          addSystemMessage('🏁 ' + (data.message || 'Quiz selesai'));
+          break;
+
+        case 'player-review':
+          displayReview(data);
+          break;
+
+        case 'error':
+          alert('❌ ' + (data.message || 'Unknown error'));
+          break;
+
+        default:
+          console.warn('Unhandled message type:', type);
+      }
+    }
+
+    // ======= SEND MESSAGE (helper) =======
+    function sendMessage(type, data = {}) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type, data }));
+        return true;
+      } else {
+        console.error('❌ WebSocket not connected');
+        // Optional: queue messages or show toast
+        return false;
+      }
+    }
+
+    // ======= UI: SWITCH STATE =======
+    function switchState(state) {
+      const states = ['waitingState', 'quizState', 'finishedState', 'reviewState'];
+      states.forEach(s => byId(s).classList.add('hidden'));
+
+      if (state === 'waiting') byId('waitingState').classList.remove('hidden');
+      if (state === 'quiz') byId('quizState').classList.remove('hidden');
+      if (state === 'finished') byId('finishedState').classList.remove('hidden');
+      if (state === 'review') byId('reviewState').classList.remove('hidden');
+
+      currentQuizState = state;
+    }
+
+    // ======= UI: PLAYER LIST =======
+    function updatePlayerList() {
+      const container = byId('playerList');
+      byId('playerCount').textContent = players.length;
+
+      if (!players || players.length === 0) {
+        container.innerHTML = '<p class="text-gray-400 text-sm">Belum ada pemain...</p>';
+        return;
+      }
+
+      container.innerHTML = players.map((player, index) => {
+        const isMe = player.clientId === clientId;
+        return `
+          <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">${index === 0 ? '👑' : '👤'}</span>
+              <div>
+                <p class="font-semibold text-gray-800">${escapeHtml(player.username)}</p>
+                ${isMe ? '<p class="text-xs text-blue-600">Anda</p>' : ''}
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="font-bold text-lg text-purple-600">${player.score ?? 0}</p>
+              <p class="text-xs text-gray-500">poin</p>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ======= UI: CHAT =======
+    function updateChatMessages() {
+      const container = byId('chatMessages');
+
+      if (!chatMessages || chatMessages.length === 0) {
+        container.innerHTML = '<p class="text-gray-400 text-sm text-center">Belum ada pesan...</p>';
+        return;
+      }
+
+      container.innerHTML = chatMessages.map(msg => {
+        const time = new Date(msg.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        return `
+          <div class="bg-white rounded-lg p-2 shadow-sm">
+            <p class="text-xs text-gray-500 mb-1"><span class="font-semibold text-purple-600">${escapeHtml(msg.username)}</span> <span class="ml-2">${time}</span></p>
+            <p class="text-sm text-gray-800">${escapeHtml(msg.message)}</p>
+          </div>
+        `;
+      }).join('');
+
+      // Auto scroll ke bawah
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function addChatMessage(username, message, timestamp = Date.now()) {
+      chatMessages.push({ username, message, timestamp });
+      updateChatMessages();
+    }
+
+    function addSystemMessage(message) {
+      const container = byId('chatMessages');
+      const time = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      const msgHtml = `
+        <div class="bg-blue-50 rounded-lg p-2 border-l-4 border-blue-500">
+          <p class="text-xs text-blue-600 mb-1">${time}</p>
+          <p class="text-sm text-blue-800 font-semibold">${escapeHtml(message)}</p>
+        </div>
+      `;
+
+      if (container.querySelector('.text-gray-400')) {
+        container.innerHTML = msgHtml;
+      } else {
+        container.innerHTML += msgHtml;
+      }
+
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // ======= UI: QUIZ - DISPLAY QUESTION =======
+    function displayQuestion(data) {
+      currentQuestion = data;
+      hasAnswered = false;
+      questionStartTime = Date.now();
+
+      byId('questionNumber').textContent = data.questionNumber ?? 1;
+      byId('totalQuestions').textContent = data.totalQuestions ?? 1;
+      byId('questionText').textContent = data.question ?? '—';
+
+      // Hide answer status & host next button
+      byId('answerStatus').classList.add('hidden');
+      byId('hostNextBtn').classList.add('hidden');
+
+      // Build options
+      const optionsContainer = byId('optionsContainer');
+      optionsContainer.innerHTML = (data.options || []).map((option, index) => `
+        <button class="option-btn w-full text-left p-4 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 rounded-lg border-2 border-blue-200 hover:border-blue-400 transition font-semibold text-gray-800" data-index="${index}">
+          <span class="text-lg mr-3">${String.fromCharCode(65 + index)}.</span>
+          ${escapeHtml(option)}
+        </button>
+      `).join('');
+
+      // Add click handlers
+      document.querySelectorAll('.option-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (!hasAnswered) submitAnswer(parseInt(btn.dataset.index));
+        });
+      });
+
+      // Start timer
+      startTimer(data.timer ?? 15);
+
+      // Switch to quiz state
+      switchState('quiz');
+    }
+
+    // ======= UI: TIMER =======
+    function startTimer(seconds) {
+      let timeLeft = Math.max(0, parseInt(seconds, 10) || 0);
+      const timerElement = byId('timer');
+
+      if (timerInterval) clearInterval(timerInterval);
+
+      timerElement.textContent = timeLeft;
+      timerElement.className = 'text-4xl font-bold text-green-500';
+
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        if (timeLeft < 0) timeLeft = 0;
+        timerElement.textContent = timeLeft;
+
+        if (timeLeft <= 5) {
+          timerElement.className = 'text-4xl font-bold text-red-500 animate-pulse';
+        } else if (timeLeft <= 10) {
+          timerElement.className = 'text-4xl font-bold text-yellow-500';
+        }
+
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+
+          // Disable options if not answered
+          if (!hasAnswered) {
+            document.querySelectorAll('.option-btn').forEach(btn => {
+              btn.disabled = true;
+              btn.classList.add('opacity-50', 'cursor-not-allowed');
+            });
+
+            byId('answerStatus').innerHTML = `
+              <div class="bg-red-100 border-2 border-red-300 text-red-800 p-4 rounded-lg text-center">
+                <p class="font-bold text-lg">⏰ Waktu Habis!</p>
+                <p class="text-sm">Anda tidak menjawab soal ini.</p>
+              </div>
+            `;
+            byId('answerStatus').classList.remove('hidden');
+          }
+
+          // Show next button for host
+          if (isHost) setTimeout(() => byId('hostNextBtn').classList.remove('hidden'), 1200);
+        }
+      }, 1000);
+    }
+
+    // ======= QUIZ: SUBMIT ANSWER =======
+    function submitAnswer(answerIndex) {
+      if (hasAnswered || !currentQuestion) return;
+      hasAnswered = true;
+
+      const timeToAnswer = ((Date.now() - questionStartTime) / 1000).toFixed(1);
+
+      // Disable all options
+      document.querySelectorAll('.option-btn').forEach(btn => {
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+      });
+
+      // Highlight selected
+      const selectedBtn = document.querySelector(`[data-index="${answerIndex}"]`);
+      if (selectedBtn) selectedBtn.classList.add('ring-4', 'ring-blue-500');
+
+      // Send to server
+      sendMessage('submit-answer', { roomCode, answerIndex, timeToAnswer });
+      console.log(`✅ Submitted answer: ${answerIndex}, time: ${timeToAnswer}s`);
+    }
+
+    // ======= QUIZ: SHOW ANSWER RESULT =======
+    function showAnswerResult(data) {
+      const statusDiv = byId('answerStatus');
+
+      document.querySelectorAll('.option-btn').forEach(btn => {
+        const index = parseInt(btn.dataset.index, 10);
+        if (index === data.correctAnswer) {
+          btn.classList.remove('from-blue-50', 'to-blue-100', 'border-blue-200');
+          btn.classList.add('from-green-200', 'to-green-300', 'border-green-500', 'ring-4', 'ring-green-400');
+        }
+      });
+
+      if (data.isCorrect) {
+        statusDiv.innerHTML = `
+          <div class="bg-green-100 border-2 border-green-400 text-green-800 p-4 rounded-lg text-center">
+            <p class="font-bold text-2xl mb-2">✅ Benar!</p>
+            <p class="text-lg">+${data.points} poin</p>
+            <p class="text-sm mt-1">Skor Anda: ${data.newScore}</p>
+          </div>
+        `;
+      } else {
+        statusDiv.innerHTML = `
+          <div class="bg-red-100 border-2 border-red-400 text-red-800 p-4 rounded-lg text-center">
+            <p class="font-bold text-2xl mb-2">❌ Salah!</p>
+            <p class="text-sm">Jawaban yang benar: <strong>${escapeHtml(data.correctAnswerText || '')}</strong></p>
+            <p class="text-sm mt-1">Skor Anda: ${data.newScore}</p>
+          </div>
+        `;
+      }
+
+      statusDiv.classList.remove('hidden');
+
+      if (timerInterval) clearInterval(timerInterval);
+
+      if (isHost) setTimeout(() => byId('hostNextBtn').classList.remove('hidden'), 1200);
+    }
+
+    // ======= UI: LEADERBOARD =======
+    function updateLeaderboard(leaderboard) {
+      const container = byId('leaderboardList');
+      container.innerHTML = (leaderboard || []).map((player, index) => {
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '👤';
+        const isMe = player.username === username;
+        return `
+          <div class="flex items-center justify-between p-3 ${isMe ? 'bg-purple-100 border-2 border-purple-400' : 'bg-white'} rounded-lg shadow">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">${medal}</span>
+              <div>
+                <p class="font-semibold ${isMe ? 'text-purple-700' : 'text-gray-800'}">${escapeHtml(player.username)} ${isMe ? '(Anda)' : ''}</p>
+                <p class="text-xs text-gray-500">Jawaban: ${player.answeredCount ?? 0}</p>
+              </div>
+            </div>
+            <p class="font-bold text-xl text-purple-600">${player.score ?? 0}</p>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ======= UI: FINAL LEADERBOARD =======
+    function displayFinalLeaderboard(leaderboard) {
+      const container = byId('finalLeaderboard');
+      container.innerHTML = (leaderboard || []).map((player, index) => {
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+        const isMe = player.username === username;
+        return `
+          <div class="flex items-center justify-between p-4 ${isMe ? 'bg-gradient-to-r from-purple-100 to-pink-100 border-2 border-purple-400' : 'bg-gray-50'} rounded-lg shadow-lg">
+            <div class="flex items-center gap-3">
+              <span class="text-3xl font-bold">${medal}</span>
+              <div>
+                <p class="font-bold text-lg ${isMe ? 'text-purple-700' : 'text-gray-800'}">${escapeHtml(player.username)} ${isMe ? '(Anda)' : ''}</p>
+                <p class="text-sm text-gray-600">${player.correctAnswers ?? 0}/${player.totalAnswers ?? 0} benar (${player.accuracy ?? 0}%)</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="font-bold text-2xl text-purple-600">${player.score ?? 0}</p>
+              <p class="text-xs text-gray-500">poin</p>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ======= UI: REVIEW =======
+    function displayReview(data) {
+      myReviewData = data;
+      byId('reviewScore').textContent = data.score ?? 0;
+      byId('reviewCorrect').textContent = data.totalCorrect ?? 0;
+      byId('reviewWrong').textContent = (data.totalQuestions ?? 0) - (data.totalCorrect ?? 0);
+
+      const container = byId('reviewQuestions');
+      container.innerHTML = (data.answers || []).map((answer, index) => {
+        const isCorrect = answer.isCorrect;
+        const bgColor = isCorrect ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300';
+        const icon = isCorrect ? '✅' : '❌';
+
+        const optionsHtml = (answer.options || []).map((option, optIndex) => {
+          let optionClass = 'bg-white border-2 border-gray-200';
+          let label = '';
+          if (optIndex === answer.correctAnswer) { optionClass = 'bg-green-200 border-green-500 font-bold'; label = '<span class="text-green-700">(Jawaban Benar)</span>'; }
+          if (optIndex === answer.selectedAnswer && !isCorrect) { optionClass = 'bg-red-200 border-red-500 font-bold'; label = '<span class="text-red-700">(Jawaban Anda)</span>'; }
+          return `<div class="${optionClass} rounded p-3"><span class="font-semibold">${String.fromCharCode(65 + optIndex)}.</span> ${escapeHtml(option)} ${label}</div>`;
+        }).join('');
+
+        return `
+          <div class="${bgColor} border-2 rounded-lg p-4">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex-1"><p class="font-bold text-gray-800 mb-2">${icon} Soal ${index + 1}: ${escapeHtml(answer.question)}</p></div>
+              <div class="text-right ml-4"><p class="text-sm text-gray-600">Waktu</p><p class="font-bold">${answer.timeToAnswer}s</p></div>
+            </div>
+            <div class="space-y-2">${optionsHtml}</div>
+            <div class="mt-3 text-right"><p class="text-sm ${isCorrect ? 'text-green-700' : 'text-red-700'} font-semibold">${isCorrect ? `+${answer.pointsEarned} poin` : '0 poin'}</p></div>
+          </div>
+        `;
+      }).join('');
+
+      switchState('review');
+    }
+
+    // ======= UI: BUTTON HANDLERS & LISTENERS =======
+    function attachUiListeners() {
+      // Send Chat
+      byId('sendChatBtn').addEventListener('click', () => {
+        const input = byId('chatInput');
+        const message = input.value.trim();
+        if (message === '') return;
+        sendMessage('send-chat', { roomCode, message });
+        input.value = '';
+      });
+
+      // Enter untuk chat
+      byId('chatInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') byId('sendChatBtn').click(); });
+
+      // Start Quiz (Host only)
+      byId('startQuizBtn').addEventListener('click', () => {
+        if (confirm('Mulai quiz sekarang?')) {
+          sendMessage('start-quiz', { roomCode });
+          byId('startQuizBtn').disabled = true;
+        }
+      });
+
+      // Next Question (Host only)
+      byId('nextQuestionBtn').addEventListener('click', () => {
+        sendMessage('next-question', { roomCode });
+        byId('hostNextBtn').classList.add('hidden');
+      });
+
+      // View Review
+      byId('viewReviewBtn').addEventListener('click', () => sendMessage('get-my-review', { roomCode }));
+
+      // Back to Leaderboard
+      byId('backToLeaderboardBtn').addEventListener('click', () => switchState('finished'));
+
+      // Leave Room
+      byId('leaveRoomBtn').addEventListener('click', () => {
+        if (confirm('Yakin ingin keluar dari room?')) {
+          localStorage.removeItem('currentRoomCode');
+          localStorage.removeItem('isHost');
+          window.location.href = '/lobby.html';
+        }
+      });
+    }
+
+    // ======= START =======
+    document.addEventListener('DOMContentLoaded', () => {
+      init();
+      attachUiListeners();
+
+      // Periodic sync to ensure player list is up to date
+      setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          sendMessage('get-room-data', { roomCode, username });
+        }
+      }, 5000); // Every 5 seconds
+    });
+  </script>
+</body>
+</html>
