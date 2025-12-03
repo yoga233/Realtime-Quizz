@@ -107,10 +107,15 @@
 
           <!-- Host Controls -->
           <div id="hostControls" class="hidden">
-            <button id="startQuizBtn"
-              class="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-4 rounded-lg hover:from-green-600 hover:to-green-700 transition font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105">🚀
-              Mulai Quiz</button>
-            <p class="text-sm text-gray-500 mt-3">Anda adalah Host. Klik tombol di atas untuk memulai quiz.</p>
+            <div class="flex gap-3 mb-4">
+              <button id="createQuestionBtn"
+                class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition font-bold shadow-lg">✏️ Buat Soal</button>
+              <button id="startQuizBtn"
+                class="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-lg hover:from-green-600 hover:to-green-700 transition font-bold shadow-lg hover:shadow-xl transform hover:scale-105">🚀
+                Mulai Quiz</button>
+            </div>
+            <div id="questionList" class="mb-3"></div>
+            <p class="text-sm text-gray-500">Anda adalah Host. Buat soal dulu, lalu mulai quiz.</p>
           </div>
 
           <div id="playerWaiting" class="hidden">
@@ -225,6 +230,58 @@
 
   </div>
 
+  <!-- Modal: Create Question -->
+  <div id="questionModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
+      <h2 class="text-2xl font-bold mb-4">✏️ Buat Soal Baru</h2>
+
+      <form id="questionForm">
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-bold mb-2">Pertanyaan:</label>
+          <textarea id="modalQuestionText" rows="3" placeholder="Masukkan pertanyaan..."
+            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            required></textarea>
+        </div>
+
+        <div class="space-y-3 mb-4">
+          <label class="block text-gray-700 text-sm font-bold">Opsi Jawaban:</label>
+          <div class="grid gap-2">
+            <input type="text" id="modalOptionA" placeholder="Opsi A" class="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            <input type="text" id="modalOptionB" placeholder="Opsi B" class="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            <input type="text" id="modalOptionC" placeholder="Opsi C" class="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            <input type="text" id="modalOptionD" placeholder="Opsi D" class="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-bold mb-2">Jawaban yang Benar:</label>
+          <select id="modalCorrectAnswer" class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:shadow-outline" required>
+            <option value="">Pilih jawaban benar...</option>
+            <option value="0">A</option>
+            <option value="1">B</option>
+            <option value="2">C</option>
+            <option value="3">D</option>
+          </select>
+        </div>
+
+        <div class="mb-6">
+          <label class="block text-gray-700 text-sm font-bold mb-2">Waktu (detik):</label>
+          <input type="number" id="modalTimerValue" min="10" max="300" value="15"
+            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+        </div>
+
+        <div class="flex gap-3">
+          <button type="button" id="cancelQuestionBtn" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600 transition">
+            Batal
+          </button>
+          <button type="submit" class="flex-1 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition">
+            Tambah Soal
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Optional: external WebSocket helper (jika ada) -->
   <!-- <script src="/js/ws-client.js"></script> -->
 
@@ -256,6 +313,7 @@
     let players = [];
     let chatMessages = [];
     let myReviewData = null;
+    let customQuestions = [];
 
     // Simple reconnect backoff (ms)
     const RECONNECT_DELAY = 3000;
@@ -836,6 +894,98 @@
       switchState('review');
     }
 
+    // ======= UI: QUESTION CREATION =======
+    function showQuestionModal() {
+      byId('questionModal').classList.remove('hidden');
+      resetQuestionForm();
+    }
+
+    function hideQuestionModal() {
+      byId('questionModal').classList.add('hidden');
+    }
+
+    function resetQuestionForm() {
+      byId('questionForm').reset();
+    }
+
+    function saveQuestion(event) {
+      event.preventDefault();
+
+      const question = byId('modalQuestionText').value.trim();
+      const options = [
+        byId('modalOptionA').value.trim(),
+        byId('modalOptionB').value.trim(),
+        byId('modalOptionC').value.trim(),
+        byId('modalOptionD').value.trim()
+      ];
+      const correctIndex = parseInt(byId('modalCorrectAnswer').value);
+      const timer = parseInt(byId('modalTimerValue').value);
+
+      // Validate
+      if (!question) {
+        alert('Pertanyaan tidak boleh kosong!');
+        return;
+      }
+      if (options.some(opt => !opt)) {
+        alert('Semua opsi jawaban harus diisi!');
+        return;
+      }
+      if (isNaN(correctIndex) || correctIndex < 0 || correctIndex > 3) {
+        alert('Pilih jawaban yang benar!');
+        return;
+      }
+      if (timer < 10 || timer > 300) {
+        alert('Waktu harus antara 10-300 detik!');
+        return;
+      }
+
+      const newQuestion = {
+        question,
+        options,
+        correct: correctIndex,
+        timer
+      };
+
+      customQuestions.push(newQuestion);
+      updateQuestionList();
+      hideQuestionModal();
+      console.log('✅ Soal tersimpan:', newQuestion);
+    }
+
+    function updateQuestionList() {
+      const container = byId('questionList');
+      if (customQuestions.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-sm text-center">Belum ada soal...</p>';
+        return;
+      }
+
+      container.innerHTML = customQuestions.map((q, index) => `
+        <div class="bg-white p-4 rounded-lg border-2 border-gray-200 mb-2">
+          <div class="flex justify-between items-start">
+            <div class="flex-1">
+              <h4 class="font-bold text-purple-600">Soal ${index + 1} (${q.timer}s)</h4>
+              <p class="text-gray-800 mb-2">${escapeHtml(q.question)}</p>
+              <ul class="text-sm text-gray-600 space-y-1">
+                ${q.options.map((opt, i) => `
+                  <li class="${i === q.correct ? 'text-green-600 font-semibold' : ''}">
+                    ${String.fromCharCode(65 + i)}. ${escapeHtml(opt)} ${i === q.correct ? '(✓ Jawaban Benar)' : ''}
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+            <button onclick="removeQuestion(${index})" class="text-red-500 hover:text-red-700 text-xl" title="Hapus soal">🗑️</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function removeQuestion(index) {
+      if (confirm('Hapus soal ini?')) {
+        customQuestions.splice(index, 1);
+        updateQuestionList();
+      }
+    }
+
     // ======= UI: BUTTON HANDLERS & LISTENERS =======
     function attachUiListeners() {
       // Send Chat
@@ -850,10 +1000,20 @@
       // Enter untuk chat
       byId('chatInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') byId('sendChatBtn').click(); });
 
+      // Question Creation
+      byId('createQuestionBtn').addEventListener('click', showQuestionModal);
+      byId('cancelQuestionBtn').addEventListener('click', hideQuestionModal);
+      byId('questionForm').addEventListener('submit', saveQuestion);
+
       // Start Quiz (Host only)
       byId('startQuizBtn').addEventListener('click', () => {
+        if (customQuestions.length === 0) {
+          alert('Buat setidaknya 1 soal terlebih dahulu!');
+          return;
+        }
         if (confirm('Mulai quiz sekarang?')) {
-          sendMessage('start-quiz', { roomCode });
+          const payload = customQuestions.length > 0 ? { roomCode, questions: customQuestions } : { roomCode };
+          sendMessage('start-quiz', payload);
           byId('startQuizBtn').disabled = true;
         }
       });

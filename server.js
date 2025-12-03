@@ -620,7 +620,7 @@ wss.on('connection', (ws) => {
       // HANDLER: START QUIZ
       // ===================================
       else if (type === 'start-quiz') {
-        const { roomCode } = data;
+        const { roomCode, questions } = data;
         let room = rooms[roomCode];
 
         if (!room) {
@@ -665,6 +665,32 @@ wss.on('connection', (ws) => {
             data: { message: 'Quiz sudah dimulai!' }
           }));
           return;
+        }
+
+        // Jika custom questions disediakan, validasi dan gunakan
+        if (questions && Array.isArray(questions) && questions.length > 0) {
+          // Validasi format questions
+          const isValid = questions.every(q =>
+            q.question && typeof q.question === 'string' &&
+            q.options && Array.isArray(q.options) && q.options.length === 4 &&
+            typeof q.correct === 'number' && q.correct >= 0 && q.correct <= 3 &&
+            typeof q.timer === 'number' && q.timer >= 10 && q.timer <= 300
+          );
+
+          if (!isValid) {
+            ws.send(JSON.stringify({
+              type: 'error',
+              data: { message: 'Format soal tidak valid!' }
+            }));
+            return;
+          }
+
+          room.quiz.questions = questions;
+          console.log(`📝 Using ${questions.length} custom questions in room ${roomCode}`);
+        } else {
+          // Gunakan default quizBank
+          room.quiz.questions = [...quizBank];
+          console.log(`📚 Using default questions (${quizBank.length}) in room ${roomCode}`);
         }
 
         room.quiz.status = 'playing';
