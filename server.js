@@ -16,9 +16,7 @@ const server = http.createServer(app);
 // ===================================
 // INISIALISASI WEBSOCKET SERVER
 // ===================================
-const wss = new WebSocket.Server({ 
-  port: process.env.WS_PORT || 3001 
-});
+const wss = new WebSocket.Server({ server });
 
 // ===================================
 // IN-MEMORY DATABASE
@@ -81,6 +79,8 @@ const quizBank = [
   }
 ];
 
+const QUESTION_TRANSITION_DELAY = 3000;
+
 // ===================================
 // EXPRESS MIDDLEWARE
 // ===================================
@@ -112,13 +112,15 @@ app.get('/api/room/:code', (req, res) => {
   if (!room) {
     return res.status(404).json({ error: 'Room not found' });
   }
-  
+
   res.json({
     code: room.code,
     totalPlayers: room.players.length,
     players: room.players.map(p => p.username),
     status: room.quiz.status,
     currentQuestion: room.quiz.currentQuestion,
+    questionStartTime: room.quiz.questionStartTime || null,
+    questionTimer: (room.quiz.currentQuestion >= 0 && room.quiz.questions[room.quiz.currentQuestion]) ? room.quiz.questions[room.quiz.currentQuestion].timer : null,
     createdAt: new Date(room.createdAt).toISOString()
   });
 });
@@ -164,7 +166,7 @@ function sendToClient(clientId, type, data) {
 function broadcastToRoom(roomCode, type, data, excludeClientId = null) {
   const room = rooms[roomCode];
   if (!room) return;
-  
+
   let sentCount = 0;
   room.players.forEach(player => {
     if (player.clientId !== excludeClientId) {
@@ -173,7 +175,7 @@ function broadcastToRoom(roomCode, type, data, excludeClientId = null) {
       }
     }
   });
-  
+
   console.log(`📤 Broadcast [${type}] to room ${roomCode}: ${sentCount} clients`);
 }
 
@@ -181,14 +183,14 @@ function broadcastToRoom(roomCode, type, data, excludeClientId = null) {
 function broadcastToRoomAll(roomCode, type, data) {
   const room = rooms[roomCode];
   if (!room) return;
-  
+
   let sentCount = 0;
   room.players.forEach(player => {
     if (sendToClient(player.clientId, type, data)) {
       sentCount++;
     }
   });
-  
+
   console.log(`📤 Broadcast [${type}] to ALL in room ${roomCode}: ${sentCount} clients`);
 }
 
@@ -213,25 +215,53 @@ function cleanupEmptyRooms() {
 function sendQuestion(roomCode, questionIndex) {
   const room = rooms[roomCode];
   if (!room) return;
-  
+
   const question = room.quiz.questions[questionIndex];
-  
+
+  room.quiz.answeredCount = 0;
+  room.quiz.totalPlayers = room.players.length;
+  room.quiz.questionStartTime = Date.now();
+
   broadcastToRoomAll(roomCode, 'new-question', {
     questionNumber: questionIndex + 1,
     totalQuestions: room.quiz.questions.length,
     question: question.question,
     options: question.options,
-    timer: question.timer
+    timer: question.timer,
+    startTime: room.quiz.questionStartTime
   });
-  
+
   console.log(`📤 Sent Q${questionIndex + 1} to room ${roomCode}`);
+
+  if (room.quiz.transitionTimeout) {
+    clearTimeout(room.quiz.transitionTimeout);
+  }
+
+  room.quiz.transitionTimeout = setTimeout(() => {
+    goToNextQuestion(roomCode);
+  }, (question.timer + 2) * 1000); // timer + 2 detik buffer
+}
+
+// Pindah ke soal berikutnya otomatis
+function goToNextQuestion(roomCode) {
+  const room = rooms[roomCode];
+  if (!room) return;
+
+  const nextIndex = room.quiz.currentQuestion + 1;
+
+  if (nextIndex >= room.quiz.questions.length) {
+    finishQuiz(roomCode);
+  } else {
+    room.quiz.currentQuestion = nextIndex;
+    sendQuestion(roomCode, nextIndex);
+  }
 }
 
 // Broadcast leaderboard
 function broadcastLeaderboard(roomCode) {
   const room = rooms[roomCode];
   if (!room) return;
-  
+
   const leaderboard = room.players
     .map(p => ({
       username: p.username,
@@ -239,7 +269,7 @@ function broadcastLeaderboard(roomCode) {
       answeredCount: p.answers.length
     }))
     .sort((a, b) => b.score - a.score);
-  
+
   broadcastToRoomAll(roomCode, 'leaderboard-update', { leaderboard });
 }
 
@@ -247,26 +277,26 @@ function broadcastLeaderboard(roomCode) {
 function finishQuiz(roomCode) {
   const room = rooms[roomCode];
   if (!room) return;
-  
+
   room.quiz.status = 'finished';
-  
+
   const leaderboard = room.players
     .map(p => ({
       username: p.username,
       score: p.score,
       correctAnswers: p.answers.filter(a => a.isCorrect).length,
       totalAnswers: p.answers.length,
-      accuracy: p.answers.length > 0 
+      accuracy: p.answers.length > 0
         ? Math.round((p.answers.filter(a => a.isCorrect).length / p.answers.length) * 100)
         : 0
     }))
     .sort((a, b) => b.score - a.score);
-  
+
   broadcastToRoomAll(roomCode, 'quiz-finished', {
     leaderboard: leaderboard,
     message: 'Quiz selesai! Terima kasih sudah bermain 🎉'
   });
-  
+
   console.log(`🏁 Quiz finished in room ${roomCode}`);
   if (leaderboard[0]) {
     console.log(`   Winner: ${leaderboard[0].username} (${leaderboard[0].score} pts)`);
@@ -279,18 +309,18 @@ function finishQuiz(roomCode) {
 wss.on('connection', (ws) => {
   // Generate unique client ID
   const clientId = generateClientId();
-  
+
   console.log(`✅ WebSocket connected: ${clientId}`);
-  
+
   // Simpan WebSocket connection sementara
   let tempClientId = clientId;
-  
+
   // Kirim client ID ke client
   ws.send(JSON.stringify({
     type: 'connected',
     data: { clientId }
   }));
-  
+
   // ===================================
   // WEBSOCKET MESSAGE HANDLER
   // ===================================
@@ -299,14 +329,14 @@ wss.on('connection', (ws) => {
       const { type, data } = JSON.parse(message);
 
       console.log(`📩 Received [${type}] from ${tempClientId}`);
-      
+
       // ===================================
       // HANDLER: CREATE ROOM
       // ===================================
       if (type === 'create-room') {
         const { username } = data;
         const roomCode = generateRoomCode();
-        
+
         // Buat room baru
         rooms[roomCode] = {
           code: roomCode,
@@ -330,7 +360,7 @@ wss.on('connection', (ws) => {
           createdAt: Date.now(),
           lastActivity: Date.now()
         };
-        
+
         // Update user data
         users[tempClientId] = {
           clientId: tempClientId,
@@ -338,10 +368,10 @@ wss.on('connection', (ws) => {
           currentRoom: roomCode,
           ws: ws
         };
-        
+
         console.log(`🏠 Room created: ${roomCode} by ${username} (${tempClientId})`);
         console.log(`   📊 Total rooms: ${Object.keys(rooms).length}, users: ${Object.keys(users).length}`);
-        
+
         // Kirim response
         ws.send(JSON.stringify({
           type: 'room-created',
@@ -352,15 +382,15 @@ wss.on('connection', (ws) => {
           }
         }));
       }
-      
+
       // ===================================
       // HANDLER: JOIN ROOM
       // ===================================
       else if (type === 'join-room') {
         const { roomCode, username } = data;
-        
+
         console.log(`🚪 Join attempt: ${username} → ${roomCode}`);
-        
+
         if (!rooms[roomCode]) {
           console.log(`   ❌ Room ${roomCode} not found`);
           ws.send(JSON.stringify({
@@ -369,7 +399,7 @@ wss.on('connection', (ws) => {
           }));
           return;
         }
-        
+
         if (rooms[roomCode].players.length >= 10) {
           ws.send(JSON.stringify({
             type: 'join-error',
@@ -377,7 +407,7 @@ wss.on('connection', (ws) => {
           }));
           return;
         }
-        
+
         if (rooms[roomCode].quiz.status === 'playing') {
           ws.send(JSON.stringify({
             type: 'join-error',
@@ -385,7 +415,7 @@ wss.on('connection', (ws) => {
           }));
           return;
         }
-        
+
         const usernameExists = rooms[roomCode].players.some(p => p.username === username);
         if (usernameExists) {
           ws.send(JSON.stringify({
@@ -394,7 +424,7 @@ wss.on('connection', (ws) => {
           }));
           return;
         }
-        
+
         // Tambahkan player
         rooms[roomCode].players.push({
           clientId: tempClientId,
@@ -405,17 +435,17 @@ wss.on('connection', (ws) => {
 
         // Update last activity
         rooms[roomCode].lastActivity = Date.now();
-        
+
         users[tempClientId] = {
           clientId: tempClientId,
           username: username,
           currentRoom: roomCode,
           ws: ws
         };
-        
+
         console.log(`👋 ${username} joined room: ${roomCode} (${tempClientId})`);
         console.log(`   📊 Room ${roomCode} now has ${rooms[roomCode].players.length} players`);
-        
+
         // Kirim response ke player yang join
         ws.send(JSON.stringify({
           type: 'room-joined',
@@ -425,7 +455,7 @@ wss.on('connection', (ws) => {
             isHost: tempClientId === rooms[roomCode].host
           }
         }));
-        
+
         // Broadcast ke semua player
         broadcastToRoomAll(roomCode, 'player-joined', {
           username: username,
@@ -436,7 +466,7 @@ wss.on('connection', (ws) => {
           }))
         });
       }
-      
+
       // ===================================
       // HANDLER: GET ROOM DATA
       // ===================================
@@ -523,7 +553,12 @@ wss.on('connection', (ws) => {
               quiz: {
                 status: room.quiz.status,
                 currentQuestion: room.quiz.currentQuestion,
-                totalQuestions: room.quiz.questions.length
+                totalQuestions: room.quiz.questions.length,
+                // If a question is active we include its server start time and the timer value
+                questionStartTime: room.quiz.questionStartTime || null,
+                questionTimer: (room.quiz.currentQuestion >= 0 && room.quiz.questions[room.quiz.currentQuestion])
+                  ? room.quiz.questions[room.quiz.currentQuestion].timer
+                  : null
               },
               chat: room.chat
             },
@@ -531,7 +566,7 @@ wss.on('connection', (ws) => {
           }
         }));
       }
-      
+
       // ===================================
       // HANDLER: SEND CHAT
       // ===================================
@@ -566,21 +601,21 @@ wss.on('connection', (ws) => {
           console.log(`   ❌ User ${tempClientId} not found even after reconnect check`);
           return;
         }
-        
+
         const chatMessage = {
           username: user.username,
           message: message.trim(),
           timestamp: Date.now()
         };
-        
+
         rooms[roomCode].chat.push(chatMessage);
-        
+
         console.log(`   💬 [${roomCode}] ${user.username}: ${message}`);
-        
+
         // Broadcast ke semua player di room
         broadcastToRoomAll(roomCode, 'new-chat', chatMessage);
       }
-      
+
       // ===================================
       // HANDLER: START QUIZ
       // ===================================
@@ -623,7 +658,7 @@ wss.on('connection', (ws) => {
           }));
           return;
         }
-        
+
         if (room.quiz.status !== 'waiting') {
           ws.send(JSON.stringify({
             type: 'error',
@@ -631,33 +666,33 @@ wss.on('connection', (ws) => {
           }));
           return;
         }
-        
+
         room.quiz.status = 'playing';
         room.quiz.currentQuestion = 0;
         room.quiz.startTime = Date.now();
-        
+
         console.log(`🎯 Quiz started in room: ${roomCode}`);
-        
+
         broadcastToRoomAll(roomCode, 'quiz-started', {
           message: 'Quiz dimulai! Bersiap...',
           totalQuestions: room.quiz.questions.length
         });
-        
+
         setTimeout(() => {
           sendQuestion(roomCode, 0);
         }, 3000);
       }
-      
+
       // ===================================
       // HANDLER: SUBMIT ANSWER
       // ===================================
       else if (type === 'submit-answer') {
-        const { roomCode, answerIndex, timeToAnswer } = data;
+          const { roomCode, answerIndex } = data; // client-supplied timeToAnswer is ignored for fairness
         const room = rooms[roomCode];
         const user = users[tempClientId];
-        
+
         if (!room || !user) return;
-        
+
         if (room.quiz.status !== 'playing') {
           ws.send(JSON.stringify({
             type: 'error',
@@ -665,13 +700,13 @@ wss.on('connection', (ws) => {
           }));
           return;
         }
-        
+
         const currentQ = room.quiz.currentQuestion;
         const question = room.quiz.questions[currentQ];
         const player = room.players.find(p => p.clientId === tempClientId);
-        
+
         if (!player) return;
-        
+
         const alreadyAnswered = player.answers.find(a => a.questionIndex === currentQ);
         if (alreadyAnswered) {
           ws.send(JSON.stringify({
@@ -680,16 +715,21 @@ wss.on('connection', (ws) => {
           }));
           return;
         }
-        
+
+        // Compute timeToAnswer using server's questionStartTime (fair and authoritative)
+        const serverTimeToAnswer = room.quiz.questionStartTime
+          ? Math.round(((Date.now() - room.quiz.questionStartTime) / 100) ) / 10 // round to 0.1s
+          : 0;
+
         const isCorrect = answerIndex === question.correct;
-        
+
         let points = 0;
         if (isCorrect) {
-          const bonus = Math.max(0, Math.floor((question.timer - timeToAnswer) / 2));
+          const bonus = Math.max(0, Math.floor((question.timer - serverTimeToAnswer) / 2));
           points = 10 + bonus;
           player.score += points;
         }
-        
+
         player.answers.push({
           questionIndex: currentQ,
           question: question.question,
@@ -697,12 +737,14 @@ wss.on('connection', (ws) => {
           selectedAnswer: answerIndex,
           correctAnswer: question.correct,
           isCorrect: isCorrect,
-          timeToAnswer: Math.round(timeToAnswer * 10) / 10,
+          timeToAnswer: serverTimeToAnswer,
           pointsEarned: points
         });
-        
-        console.log(`📝 ${user.username} answered Q${currentQ + 1}: ${isCorrect ? '✅' : '❌'} (+${points})`);
-        
+
+        room.quiz.answeredCount = (room.quiz.answeredCount || 0) + 1;
+
+        console.log(`📝 ${user.username} answered Q${currentQ + 1}: ${isCorrect ? '✅' : '❌'} (+${points}) | ${room.quiz.answeredCount}/${room.quiz.totalPlayers}`);
+
         ws.send(JSON.stringify({
           type: 'answer-submitted',
           data: {
@@ -710,32 +752,60 @@ wss.on('connection', (ws) => {
             correctAnswer: question.correct,
             correctAnswerText: question.options[question.correct],
             points: points,
-            newScore: player.score
+            newScore: player.score,
+            answeredCount: room.quiz.answeredCount,
+            totalPlayers: room.quiz.totalPlayers
           }
         }));
-        
-        broadcastLeaderboard(roomCode);
-      }
-      
-      // ===================================
-      // HANDLER: NEXT QUESTION
-      // ===================================
-      else if (type === 'next-question') {
-        const { roomCode } = data;
-        const room = rooms[roomCode];
-        
-        if (!room || tempClientId !== room.host) return;
-        
-        const nextIndex = room.quiz.currentQuestion + 1;
-        
-        if (nextIndex >= room.quiz.questions.length) {
-          finishQuiz(roomCode);
-        } else {
-          room.quiz.currentQuestion = nextIndex;
-          sendQuestion(roomCode, nextIndex);
+
+        broadcastToRoomAll(roomCode, 'answer-progress', {
+          answeredCount: room.quiz.answeredCount,
+          totalPlayers: room.quiz.totalPlayers,
+          questionNumber: currentQ + 1
+        });
+
+        if (room.quiz.answeredCount >= room.quiz.totalPlayers) {
+          console.log(`🎯 All players answered Q${currentQ + 1}! Moving to next in 3s...`);
+
+          // Broadcast bahwa semua sudah menjawab
+          broadcastToRoomAll(roomCode, 'all-answered', {
+            message: 'Semua sudah menjawab! Soal berikutnya dalam 3 detik...'
+          });
+
+          // Hapus timeout lama jika ada
+          if (room.quiz.transitionTimeout) {
+            clearTimeout(room.quiz.transitionTimeout);
+          }
+
+          // Pindah ke soal berikutnya dalam 3 detik
+          room.quiz.transitionTimeout = setTimeout(() => {
+            goToNextQuestion(roomCode);
+          }, QUESTION_TRANSITION_DELAY);
         }
+
+        broadcastLeaderboard(roomCode);
+
       }
-      
+
+      // // ===================================
+      // // HANDLER: NEXT QUESTION
+      // // ===================================
+      // else if (type === 'next-question') {
+      //   const { roomCode } = data;
+      //   const room = rooms[roomCode];
+
+      //   if (!room || tempClientId !== room.host) return;
+
+      //   const nextIndex = room.quiz.currentQuestion + 1;
+
+      //   if (nextIndex >= room.quiz.questions.length) {
+      //     finishQuiz(roomCode);
+      //   } else {
+      //     room.quiz.currentQuestion = nextIndex;
+      //     sendQuestion(roomCode, nextIndex);
+      //   }
+      // }
+
       // ===================================
       // HANDLER: GET MY REVIEW
       // ===================================
@@ -743,7 +813,7 @@ wss.on('connection', (ws) => {
         const { roomCode } = data;
         const room = rooms[roomCode];
         const player = room?.players.find(p => p.clientId === tempClientId);
-        
+
         if (!room || !player) {
           ws.send(JSON.stringify({
             type: 'error',
@@ -751,7 +821,7 @@ wss.on('connection', (ws) => {
           }));
           return;
         }
-        
+
         ws.send(JSON.stringify({
           type: 'player-review',
           data: {
@@ -763,7 +833,7 @@ wss.on('connection', (ws) => {
           }
         }));
       }
-      
+
       // ===================================
       // HANDLER: PING (KEEP ALIVE)
       // ===================================
@@ -773,12 +843,12 @@ wss.on('connection', (ws) => {
           data: { timestamp: Date.now() }
         }));
       }
-      
+
     } catch (error) {
       console.error('❌ Error handling message:', error);
     }
   });
-  
+
   // ===================================
   // WEBSOCKET CLOSE HANDLER
   // ===================================
@@ -822,7 +892,7 @@ wss.on('connection', (ws) => {
     // Don't cleanup immediately - let players reconnect
     // cleanupEmptyRooms();
   });
-  
+
   // ===================================
   // WEBSOCKET ERROR HANDLER
   // ===================================
@@ -843,17 +913,16 @@ setInterval(() => {
 // START SERVERS
 // ===================================
 const HTTP_PORT = process.env.PORT || 3000;
-const WS_PORT = process.env.WS_PORT || 3001;
 
 server.listen(HTTP_PORT, () => {
   console.log(`
   ╔════════════════════════════════════════════╗
-  ║  🚀 Real-Time Quiz Server (Native WS)      ║
-  ║  📡 HTTP: http://localhost:${HTTP_PORT}           ║
-  ║  🔌 WebSocket: ws://localhost:${WS_PORT}          ║
-  ║  💾 Storage: In-Memory + History           ║
-  ║  📊 Quiz Bank: ${quizBank.length} questions                  ║
-  ║  👥 Max Players per Room: 10               ║
+    🚀 Real-Time Quiz Server (Native WS)
+    📡 HTTP: http://localhost:${HTTP_PORT}
+    🔌 WebSocket: ws://localhost:${HTTP_PORT}
+    💾 Storage: In-Memory + History
+    📊 Quiz Bank: ${quizBank.length} questions
+    👥 Max Players per Room: 10
   ╚════════════════════════════════════════════╝
   `);
 });

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,15 +8,31 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* Custom scrollbar untuk chat */
-    .chat-container::-webkit-scrollbar { width: 6px; }
-    .chat-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-    .chat-container::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
-    .chat-container::-webkit-scrollbar-thumb:hover { background: #555; }
+    .chat-container::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .chat-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    .chat-container::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 10px;
+    }
+
+    .chat-container::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
 
     /* Small helpers */
-    .no-select { user-select: none; }
+    .no-select {
+      user-select: none;
+    }
   </style>
 </head>
+
 <body class="bg-gray-100 min-h-screen">
   <!-- Container Utama -->
   <div class="container mx-auto p-4 max-w-7xl">
@@ -25,7 +42,8 @@
       <div class="flex justify-between items-center">
         <div>
           <h1 class="text-2xl font-bold">🎯 Room Quiz</h1>
-          <p class="text-sm opacity-90">Kode: <span id="roomCodeDisplay" class="font-bold text-yellow-300 text-lg">---</span></p>
+          <p class="text-sm opacity-90">Kode: <span id="roomCodeDisplay"
+              class="font-bold text-yellow-300 text-lg">---</span></p>
         </div>
         <div class="text-right">
           <p class="text-sm opacity-90">Username:</p>
@@ -69,14 +87,10 @@
 
           <!-- Chat Input -->
           <div class="flex gap-2">
-            <input
-              type="text"
-              id="chatInput"
-              placeholder="Ketik pesan..."
-              maxlength="200"
-              class="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-            />
-            <button id="sendChatBtn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-semibold">Kirim</button>
+            <input type="text" id="chatInput" placeholder="Ketik pesan..." maxlength="200"
+              class="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" />
+            <button id="sendChatBtn"
+              class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-semibold">Kirim</button>
           </div>
         </div>
 
@@ -93,7 +107,9 @@
 
           <!-- Host Controls -->
           <div id="hostControls" class="hidden">
-            <button id="startQuizBtn" class="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-4 rounded-lg hover:from-green-600 hover:to-green-700 transition font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105">🚀 Mulai Quiz</button>
+            <button id="startQuizBtn"
+              class="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-4 rounded-lg hover:from-green-600 hover:to-green-700 transition font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105">🚀
+              Mulai Quiz</button>
             <p class="text-sm text-gray-500 mt-3">Anda adalah Host. Klik tombol di atas untuk memulai quiz.</p>
           </div>
 
@@ -109,7 +125,8 @@
           <div class="flex justify-between items-center mb-4 pb-4 border-b-2">
             <div>
               <p class="text-sm text-gray-500">Pertanyaan</p>
-              <p class="text-2xl font-bold text-purple-600"><span id="questionNumber">1</span> / <span id="totalQuestions">5</span></p>
+              <p class="text-2xl font-bold text-purple-600"><span id="questionNumber">1</span> / <span
+                  id="totalQuestions">5</span></p>
             </div>
             <div class="text-right">
               <p class="text-sm text-gray-500">Waktu Tersisa</p>
@@ -130,11 +147,6 @@
           <!-- Submit Answer Status -->
           <div id="answerStatus" class="hidden p-4 rounded-lg mb-4"></div>
 
-          <!-- Host Next Button -->
-          <div id="hostNextBtn" class="hidden text-center">
-            <button id="nextQuestionBtn" class="bg-blue-500 text-white px-8 py-3 rounded-lg hover:bg-blue-600 transition font-bold shadow-lg">Soal Berikutnya →</button>
-          </div>
-
         </div>
 
         <!-- FINISHED STATE -->
@@ -154,7 +166,9 @@
 
           <!-- Review Button -->
           <div class="text-center">
-            <button id="viewReviewBtn" class="bg-purple-500 text-white px-6 py-3 rounded-lg hover:bg-purple-600 transition font-bold">📊 Lihat Review Jawaban Saya</button>
+            <button id="viewReviewBtn"
+              class="bg-purple-500 text-white px-6 py-3 rounded-lg hover:bg-purple-600 transition font-bold">📊 Lihat
+              Review Jawaban Saya</button>
           </div>
 
         </div>
@@ -164,7 +178,8 @@
 
           <div class="flex justify-between items-center mb-6">
             <h2 class="text-2xl font-bold text-gray-800">📊 Review Jawaban Anda</h2>
-            <button id="backToLeaderboardBtn" class="text-blue-600 hover:text-blue-800 underline">← Kembali ke Leaderboard</button>
+            <button id="backToLeaderboardBtn" class="text-blue-600 hover:text-blue-800 underline">← Kembali ke
+              Leaderboard</button>
           </div>
 
           <!-- Review Summary -->
@@ -191,8 +206,10 @@
         </div>
 
         <!-- REALTIME LEADERBOARD (Sidebar) -->
-        <div id="realtimeLeaderboard" class="hidden bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg shadow-lg p-6 mt-4">
-          <h3 class="text-xl font-bold mb-4 flex items-center"><span class="text-2xl mr-2">🏆</span>Leaderboard Sementara</h3>
+        <div id="realtimeLeaderboard"
+          class="hidden bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg shadow-lg p-6 mt-4">
+          <h3 class="text-xl font-bold mb-4 flex items-center"><span class="text-2xl mr-2">🏆</span>Leaderboard
+            Sementara</h3>
           <div id="leaderboardList" class="space-y-2"></div>
         </div>
 
@@ -202,7 +219,8 @@
 
     <!-- Leave Room Button -->
     <div class="mt-4 text-center">
-      <button id="leaveRoomBtn" class="text-red-600 hover:text-red-800 underline font-semibold">🚪 Keluar dari Room</button>
+      <button id="leaveRoomBtn" class="text-red-600 hover:text-red-800 underline font-semibold">🚪 Keluar dari
+        Room</button>
     </div>
 
   </div>
@@ -231,6 +249,8 @@
     let questionStartTime = null;
     let timerInterval = null;
     let hasAnswered = false;
+    // Manual mode: when the user opens Review, we prevent automatic state changes
+    let manualReviewOpen = false;
 
     // Data
     let players = [];
@@ -249,44 +269,50 @@
     function byId(id) { return document.getElementById(id); }
 
     // ===================================
-// INITIALIZATION
-// ===================================
-  function init() {
-    // Ambil data dari localStorage
-    username = localStorage.getItem('username');
-    roomCode = localStorage.getItem('currentRoomCode');
-    isHost = localStorage.getItem('isHost') === 'true';
-    clientId = localStorage.getItem('clientId');
+    // INITIALIZATION
+    // ===================================
+    function init() {
+      // Ambil data dari localStorage
+      username = localStorage.getItem('username');
+      roomCode = localStorage.getItem('currentRoomCode');
+      isHost = localStorage.getItem('isHost') === 'true';
+      clientId = localStorage.getItem('clientId');
 
-    console.log('🔧 Init room.html:', { username, roomCode, isHost, clientId });
+      console.log('🔧 Init room.html:', { username, roomCode, isHost, clientId });
 
-    // Validasi
-    if (!username || !roomCode) {
-      alert('❌ Data tidak lengkap! Redirect ke lobby...');
-      window.location.href = '/lobby.html';
-      return;
+      // Validasi
+      if (!username || !roomCode) {
+        alert('❌ Data tidak lengkap! Redirect ke lobby...');
+        window.location.href = '/lobby.html';
+        return;
+      }
+
+      // Tampilkan info
+      document.getElementById('usernameDisplay').textContent = username;
+      document.getElementById('roomCodeDisplay').textContent = roomCode;
+
+      // Initially show controls based on localStorage (will be updated after room-data)
+      if (isHost) {
+        document.getElementById('hostControls').classList.remove('hidden');
+        document.getElementById('playerWaiting').classList.add('hidden');
+      } else {
+        document.getElementById('hostControls').classList.add('hidden');
+        document.getElementById('playerWaiting').classList.remove('hidden');
+      }
+
+      // Inisialisasi WebSocket
+      initWebSocket();
     }
-
-    // Tampilkan info
-    document.getElementById('usernameDisplay').textContent = username;
-    document.getElementById('roomCodeDisplay').textContent = roomCode;
-
-    // Initially show controls based on localStorage (will be updated after room-data)
-    if (isHost) {
-      document.getElementById('hostControls').classList.remove('hidden');
-      document.getElementById('playerWaiting').classList.add('hidden');
-    } else {
-      document.getElementById('hostControls').classList.add('hidden');
-      document.getElementById('playerWaiting').classList.remove('hidden');
-    }
-
-    // Inisialisasi WebSocket
-    initWebSocket();
-  }
     // ======= WEBSOCKET SETUP =======
     function initWebSocket() {
       try {
-        ws = new WebSocket('ws://localhost:3001');
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        const wsUrl = `${protocol}//${host}`;
+
+        console.log("Menghubungkan ke:", wsUrl);
+        ws = new WebSocket(wsUrl);
+
       } catch (err) {
         console.error('❌ Gagal membuat WebSocket:', err);
         byId('connectionStatus').innerHTML = '❌ <span class="font-semibold text-red-300">Gagal koneksi</span>';
@@ -357,11 +383,34 @@
             byId('playerWaiting').classList.remove('hidden');
           }
 
+          // Don't auto-navigate away if user is currently viewing their review
+          const isViewingReview = currentQuizState === 'review';
           if (data.room.quiz && data.room.quiz.status === 'playing') {
-            switchState('quiz');
-            byId('realtimeLeaderboard').classList.remove('hidden');
+            if (!isViewingReview && !manualReviewOpen) {
+              console.log('🔁 room-data: switching to quiz because room is playing');
+              switchState('quiz');
+              byId('realtimeLeaderboard').classList.remove('hidden');
+            } else {
+              console.log('🔕 room-data: quiz playing but user is viewing review or manualReviewOpen=true; skip switch');
+            }
+            // If server provided a start time for the current question, compute and sync the remaining time
+            const qStart = data.room.quiz.questionStartTime;
+            const qTimer = data.room.quiz.questionTimer;
+            if (qStart && qTimer) {
+              // If a question is already shown, don't overwrite question text/options - just sync timer
+              const elapsed = Math.floor((Date.now() - qStart) / 1000);
+              const remaining = Math.max(0, qTimer - elapsed);
+              // Set questionStartTime so submitAnswer uses it to compute timeToAnswer
+              questionStartTime = qStart;
+              startTimer(remaining);
+            }
           } else if (data.room.quiz && data.room.quiz.status === 'finished') {
-            switchState('finished');
+            if (!isViewingReview && !manualReviewOpen) {
+              console.log('🔁 room-data: switching to finished because room is finished');
+              switchState('finished');
+            } else {
+              console.log('🔕 room-data: room finished but user is viewing review or manualReviewOpen=true; skip switch');
+            }
           }
           break;
 
@@ -395,13 +444,20 @@
         case 'quiz-started':
           addSystemMessage('🎯 Quiz dimulai! Bersiap...');
           setTimeout(() => {
-            switchState('quiz');
-            byId('realtimeLeaderboard').classList.remove('hidden');
+            if (!manualReviewOpen && currentQuizState !== 'review') {
+              console.log('🔁 quiz-started: switching to quiz');
+              switchState('quiz');
+              byId('realtimeLeaderboard').classList.remove('hidden');
+            } else {
+              console.log('🔕 quiz-started: skipping switch because manualReviewOpen or currentQuizState === review');
+            }
           }, 800);
           break;
 
         case 'new-question':
-          displayQuestion(data);
+          // If user is manually viewing review, don't interrupt
+          if (!manualReviewOpen) displayQuestion(data);
+          else console.log('🔕 new-question event skipped due to manualReviewOpen');
           break;
 
         case 'answer-submitted':
@@ -414,11 +470,16 @@
 
         case 'quiz-finished':
           displayFinalLeaderboard(data.leaderboard || []);
-          switchState('finished');
+          // If the user is viewing their review, don't override it. Otherwise switch to finished view.
+          if (!manualReviewOpen && currentQuizState !== 'review') {
+            switchState('finished');
+          }
           addSystemMessage('🏁 ' + (data.message || 'Quiz selesai'));
           break;
 
         case 'player-review':
+          // When review is displayed, mark manualReviewOpen to avoid auto switching
+          manualReviewOpen = true;
           displayReview(data);
           break;
 
@@ -535,17 +596,29 @@
 
     // ======= UI: QUIZ - DISPLAY QUESTION =======
     function displayQuestion(data) {
+      // If user is in review mode, do not interrupt (leave them in the review view)
+      if (currentQuizState === 'review') {
+        console.log('🔕 Skipping displayQuestion because user is viewing review');
+        return;
+      }
       currentQuestion = data;
       hasAnswered = false;
-      questionStartTime = Date.now();
+      // If server provided startTime (ms since epoch), use it so clients resync correctly.
+      // Otherwise fallback to client now.
+      if (data && data.startTime) {
+        questionStartTime = data.startTime;
+      } else {
+        questionStartTime = Date.now();
+      }
 
       byId('questionNumber').textContent = data.questionNumber ?? 1;
       byId('totalQuestions').textContent = data.totalQuestions ?? 1;
       byId('questionText').textContent = data.question ?? '—';
 
-      // Hide answer status & host next button
+      // Hide answer status & host next button (guarding missing UI elements)
       byId('answerStatus').classList.add('hidden');
-      byId('hostNextBtn').classList.add('hidden');
+      const hostNextEl = byId('hostNextBtn');
+      if (hostNextEl) hostNextEl.classList.add('hidden');
 
       // Build options
       const optionsContainer = byId('optionsContainer');
@@ -563,8 +636,13 @@
         });
       });
 
-      // Start timer
-      startTimer(data.timer ?? 15);
+      // Start timer. If server provided a startTime, compute remaining time accordingly.
+      let remaining = data.timer ?? 15;
+      if (data && data.startTime) {
+        const elapsed = Math.floor((Date.now() - data.startTime) / 1000);
+        remaining = Math.max(0, (data.timer || 15) - elapsed);
+      }
+      startTimer(remaining);
 
       // Switch to quiz state
       switchState('quiz');
@@ -610,8 +688,8 @@
             byId('answerStatus').classList.remove('hidden');
           }
 
-          // Show next button for host
-          if (isHost) setTimeout(() => byId('hostNextBtn').classList.remove('hidden'), 1200);
+          // Show next button for host (guard DOM element)
+          if (isHost) setTimeout(() => { const el = byId('hostNextBtn'); if (el) el.classList.remove('hidden'); }, 1200);
         }
       }, 1000);
     }
@@ -621,7 +699,7 @@
       if (hasAnswered || !currentQuestion) return;
       hasAnswered = true;
 
-      const timeToAnswer = ((Date.now() - questionStartTime) / 1000).toFixed(1);
+      const timeToAnswer = parseFloat(((Date.now() - questionStartTime) / 1000).toFixed(1));
 
       // Disable all options
       document.querySelectorAll('.option-btn').forEach(btn => {
@@ -672,7 +750,7 @@
 
       if (timerInterval) clearInterval(timerInterval);
 
-      if (isHost) setTimeout(() => byId('hostNextBtn').classList.remove('hidden'), 1200);
+      if (isHost) setTimeout(() => { const el = byId('hostNextBtn'); if (el) el.classList.remove('hidden'); }, 1200);
     }
 
     // ======= UI: LEADERBOARD =======
@@ -708,6 +786,7 @@
               <span class="text-3xl font-bold">${medal}</span>
               <div>
                 <p class="font-bold text-lg ${isMe ? 'text-purple-700' : 'text-gray-800'}">${escapeHtml(player.username)} ${isMe ? '(Anda)' : ''}</p>
+                <!-- todo: jawaban benar/ total soal (akurasi) -->
                 <p class="text-sm text-gray-600">${player.correctAnswers ?? 0}/${player.totalAnswers ?? 0} benar (${player.accuracy ?? 0}%)</p>
               </div>
             </div>
@@ -722,6 +801,7 @@
 
     // ======= UI: REVIEW =======
     function displayReview(data) {
+      console.log('🔎 displayReview called, manualReviewOpen=', manualReviewOpen);
       myReviewData = data;
       byId('reviewScore').textContent = data.score ?? 0;
       byId('reviewCorrect').textContent = data.totalCorrect ?? 0;
@@ -778,17 +858,28 @@
         }
       });
 
-      // Next Question (Host only)
-      byId('nextQuestionBtn').addEventListener('click', () => {
-        sendMessage('next-question', { roomCode });
-        byId('hostNextBtn').classList.add('hidden');
-      });
+      // Next Question (Host only) - only wire if element exists
+      const nextBtn = byId('nextQuestionBtn');
+      if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+          sendMessage('next-question', { roomCode });
+          const hostBtn = byId('hostNextBtn');
+          if (hostBtn) hostBtn.classList.add('hidden');
+        });
+      }
 
       // View Review
-      byId('viewReviewBtn').addEventListener('click', () => sendMessage('get-my-review', { roomCode }));
+      byId('viewReviewBtn').addEventListener('click', () => {
+        // Set manual flag immediately so we don't get the review closed by concurrent messages
+        manualReviewOpen = true;
+        sendMessage('get-my-review', { roomCode });
+      });
 
       // Back to Leaderboard
-      byId('backToLeaderboardBtn').addEventListener('click', () => switchState('finished'));
+      byId('backToLeaderboardBtn').addEventListener('click', () => {
+        manualReviewOpen = false;
+        switchState('finished');
+      });
 
       // Leave Room
       byId('leaveRoomBtn').addEventListener('click', () => {
@@ -807,6 +898,8 @@
 
       // Periodic sync to ensure player list is up to date
       setInterval(() => {
+        // If user opened review manually, pause periodic room-data to avoid forcing UI changes
+        if (manualReviewOpen) return;
         if (ws && ws.readyState === WebSocket.OPEN) {
           sendMessage('get-room-data', { roomCode, username });
         }
@@ -814,4 +907,5 @@
     });
   </script>
 </body>
+
 </html>

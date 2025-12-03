@@ -96,7 +96,12 @@
     let isConnected = false;
 
     function initWebSocket() {
-      ws = new WebSocket("ws://localhost:3001");
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      const wsUrl = `${protocol}//${host}`;
+      
+      console.log("Menghubungkan ke:", wsUrl);
+      ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
         isConnected = true;
