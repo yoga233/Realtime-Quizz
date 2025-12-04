@@ -1,89 +1,99 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lobby - Real-Time Quiz</title>
+  <title>Lobby - Apanih</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    * { font-family: 'Inter', sans-serif; }
+  </style>
 </head>
 
-<body
-  class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen flex items-center justify-center p-4">
+<body class="bg-gray-50 min-h-screen">
 
-  <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl">
+  <div class="container mx-auto p-6 max-w-4xl">
 
     <!-- Header -->
-    <div class="text-center mb-8">
-      <h1 class="text-4xl font-bold text-gray-800 mb-2">
-        🏠 Lobby Quiz
-      </h1>
-      <p class="text-gray-600">
-        Selamat datang, <span id="usernameDisplay" class="font-bold text-purple-600"></span>!
-      </p>
-      <p class="text-sm text-gray-500 mt-2">
-        <span id="connectionStatus">🔌 Menghubungkan...</span>
-      </p>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
+      <div class="mb-4">
+        <h1 class="text-3xl font-bold text-gray-900 mb-1">Lobby Kuis</h1>
+        <!-- <p class="text-sm text-gray-600">Real-time multiplayer quizzes with zero latency</p> -->
+      </div>
+      <div>
+        <p class="text-sm text-gray-600 mb-1">Selamat datang,</p>
+        <p class="font-semibold text-gray-900" id="usernameDisplay">---</p>
+      </div>
+      <p id="connectionStatus" class="text-xs text-gray-600 mt-4">🔌 Connecting to server…</p>
     </div>
 
-    <!-- Pilihan: Create atau Join Room -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <!-- Main Content -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
 
-      <!-- CREATE ROOM -->
-      <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border-2 border-blue-200">
-        <h2 class="text-2xl font-bold text-blue-700 mb-4">
-          🎮 Buat Room Baru
-        </h2>
-        <p class="text-gray-600 mb-4 text-sm">
-          Anda akan menjadi <strong>Host</strong> dan bisa memulai quiz
+      <!-- Create Room Card -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-gray-900">🎮 Buat Ruangan</h2>
+        </div>
+        <p class="text-gray-600 text-sm mb-6">
+          Buat ruangan kuis baru dan undang orang lain untuk bergabung. Kamu akan menjadi host dan dapat mengontrol jalannya kuis.
         </p>
-        <button id="createRoomBtn"
-          class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition font-semibold shadow-lg hover:shadow-xl transform hover:scale-105">
-          Buat Room
+        <button
+          id="createRoomBtn"
+          class="w-full bg-gray-900 text-white py-3 rounded-lg text-sm font-semibold hover:bg-black transition-colors shadow-sm"
+        >
+          Buat Ruangan Baru
         </button>
       </div>
 
-      <!-- JOIN ROOM -->
-      <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border-2 border-green-200">
-        <h2 class="text-2xl font-bold text-green-700 mb-4">
-          🚪 Join Room
-        </h2>
-        <p class="text-gray-600 mb-4 text-sm">
-          Masukkan kode room untuk bergabung
+      <!-- Join Room Card -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-gray-900">🚪 Bergabung ke Ruangan</h2>
+        </div>
+        <p class="text-gray-600 text-sm mb-4">
+          Masukkan kode ruangan yang diberikan oleh host.
         </p>
-        <input type="text" id="roomCodeInput" placeholder="Contoh: ABC123" maxlength="6"
-          class="w-full px-4 py-2 border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500 mb-3 uppercase text-center text-lg font-bold">
-        <button id="joinRoomBtn"
-          class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-lg hover:from-green-600 hover:to-green-700 transition font-semibold shadow-lg hover:shadow-xl transform hover:scale-105">
-          Join Room
+        <div class="mb-4">
+          <input
+            type="text"
+            id="roomCodeInput"
+            placeholder="Masukkan kode ruangan"
+            maxlength="6"
+            class="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 transition bg-white text-gray-900 placeholder-gray-400 uppercase text-center text-lg font-bold"
+          />
+        </div>
+        <button
+          id="joinRoomBtn"
+          class="w-full bg-gray-900 text-white py-3 rounded-lg text-sm font-semibold hover:bg-black transition-colors shadow-sm"
+        >
+          Gabung
         </button>
       </div>
 
     </div>
 
     <!-- Loading Indicator -->
-    <div id="loadingIndicator" class="hidden text-center py-4">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-      <p class="text-gray-600 mt-2">Memproses...</p>
+    <div id="loadingIndicator" class="hidden mb-8 p-4 bg-gray-100 rounded-lg border border-gray-200 text-center">
+      <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-gray-900 border-t-transparent mb-2"></div>
+      <p class="text-sm text-gray-600">Memproses permintaan…</p>
     </div>
 
-    <!-- Info Box -->
-    <div class="mt-6 p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg">
-      <p class="text-sm text-yellow-800">
-        <strong>💡 Tips:</strong> Pastikan semua peserta terhubung ke WiFi/LAN yang sama!
-      </p>
-    </div>
-
-    <!-- Back Button -->
-    <div class="mt-6 text-center">
-      <button id="backBtn" class="text-gray-600 hover:text-gray-800 underline text-sm">
+    <!-- Footer -->
+    <div class="text-center">
+      <button
+        id="backBtn"
+        class="text-gray-600 hover:text-gray-900 text-sm font-medium transition"
+      >
         ← Kembali ke Login
       </button>
     </div>
 
   </div>
 
-  <!-- Import WebSocket Client Helper -->
+  <!-- WebSocket Client -->
   <script src="/js/ws-client.js"></script>
 
   <script>
@@ -99,21 +109,21 @@
     // INITIALIZATION
     // ===================================
     function init() {
-      // Ambil username dari localStorage
+      // Get username from localStorage
       username = localStorage.getItem('username');
       clientId = localStorage.getItem('clientId');
 
-      // Validasi: harus ada username
+      // Validate username exists
       if (!username) {
-        alert('❌ Username tidak ditemukan! Redirect ke login...');
+        alert('❌ Nama pengguna tidak ditemukan! Mengalihkan ke halaman login...');
         window.location.href = '/';
         return;
       }
 
-      // Tampilkan username
+      // Display username
       document.getElementById('usernameDisplay').textContent = username;
 
-      // Inisialisasi WebSocket
+      // Initialize WebSocket
       initWebSocket();
     }
 
@@ -125,25 +135,21 @@
       const host = window.location.host;
       const wsUrl = `${protocol}//${host}`;
 
-      console.log("Menghubungkan ke:", wsUrl);
+      console.log("Connecting to:", wsUrl);
       ws = new WebSocket(wsUrl);
-
 
       ws.onopen = () => {
         console.log('✅ WebSocket connected');
         isConnected = true;
-
         document.getElementById('connectionStatus').innerHTML =
-          '✅ <span class="text-green-600 font-semibold">Terhubung</span>';
+          '✅ <span class="text-green-600 font-medium">Connected</span>';
       };
 
       ws.onmessage = (event) => {
         try {
           const { type, data } = JSON.parse(event.data);
           console.log('📩 Received:', type, data);
-
           handleMessage(type, data);
-
         } catch (error) {
           console.error('❌ Error parsing message:', error);
         }
@@ -152,21 +158,22 @@
       ws.onclose = () => {
         console.log('❌ WebSocket disconnected');
         isConnected = false;
-
         document.getElementById('connectionStatus').innerHTML =
-          '❌ <span class="text-red-600 font-semibold">Terputus</span>';
+          '❌ <span class="text-red-600 font-medium">Disconnected</span> — Reconnecting…';
 
-        // JANGAN auto reconnect jika sedang redirect
-        if (!document.hidden) {
-          setTimeout(() => {
+        // Auto-reconnect after delay
+        setTimeout(() => {
+          if (!document.hidden) {
             console.log('🔄 Reconnecting...');
             initWebSocket();
-          }, 3000);
-        }
+          }
+        }, 3000);
       };
 
       ws.onerror = (error) => {
         console.error('❌ WebSocket error:', error);
+        document.getElementById('connectionStatus').innerHTML =
+          '❌ <span class="text-red-600 font-medium">Connection error</span>';
       };
     }
 
@@ -174,75 +181,59 @@
     // MESSAGE HANDLER
     // ===================================
     function handleMessage(type, data) {
-
-      // Handle: Connected (dapat client ID baru)
-      if (type === 'connected') {
-        clientId = data.clientId;
-        localStorage.setItem('clientId', clientId);
-        console.log('🆔 New Client ID:', clientId);
-      }
-
       // Handle: Room Created
-      else if (type === 'room-created') {
+      if (type === 'room-created') {
         hideLoading();
-
         if (data.success) {
           console.log('✅ Room created:', data.roomCode);
-
-          // Simpan room code di localStorage
           localStorage.setItem('currentRoomCode', data.roomCode);
-          localStorage.setItem('isHost', data.isHost);
-
-          // JANGAN close WebSocket, biarkan tetap connect
-          // Redirect ke room
+          localStorage.setItem('isHost', 'true');
           setTimeout(() => {
             window.location.href = '/room.html';
           }, 100);
         } else {
-          alert('❌ Gagal membuat room!');
+          alert('❌ Gagal membuat ruangan!');
         }
       }
 
       // Handle: Room Joined
       else if (type === 'room-joined') {
         hideLoading();
-
         if (data.success) {
           console.log('✅ Joined room:', data.roomCode);
-
-          // Simpan room code di localStorage
           localStorage.setItem('currentRoomCode', data.roomCode);
-          localStorage.setItem('isHost', data.isHost);
-
-          // Redirect ke room
+          localStorage.setItem('isHost', 'false');
           setTimeout(() => {
             window.location.href = '/room.html';
           }, 100);
+        } else {
+          alert('❌ Gagal bergabung ke ruangan!');
         }
       }
 
-      // Handle: Join Error
-      else if (type === 'join-error') {
+      // Handle: Error
+      else if (type === 'join-error' || type === 'error') {
         hideLoading();
-        alert('❌ ' + data.message);
+        alert('❌ ' + (data.message || 'Terjadi kesalahan'));
       }
 
-      // Handle: Error
-      else if (type === 'error') {
-        hideLoading();
-        alert('❌ Error: ' + data.message);
+      // Handle: Connected (new client ID)
+      else if (type === 'connected') {
+        clientId = data.clientId;
+        localStorage.setItem('clientId', clientId);
+        console.log('🆔 Client ID:', clientId);
       }
     }
 
     // ===================================
-    // HELPER: SEND MESSAGE
+    // SEND MESSAGE
     // ===================================
-    function sendMessage(type, data) {
+    function sendMessage(type, data = {}) {
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type, data }));
         return true;
       } else {
-        alert('❌ WebSocket belum terhubung!');
+        alert('❌ WebSocket not connected! Please wait…');
         return false;
       }
     }
@@ -269,13 +260,11 @@
     // CREATE ROOM
     document.getElementById('createRoomBtn').addEventListener('click', () => {
       if (!isConnected) {
-        alert('❌ WebSocket belum terhubung! Tunggu sebentar...');
+        alert('❌ WebSocket not connected! Please wait…');
         return;
       }
 
       showLoading();
-
-      // Kirim request create room
       sendMessage('create-room', { username });
     });
 
@@ -284,23 +273,21 @@
       const roomCode = document.getElementById('roomCodeInput').value.trim().toUpperCase();
 
       if (!isConnected) {
-        alert('❌ WebSocket belum terhubung! Tunggu sebentar...');
+        alert('❌ WebSocket not connected! Please wait…');
         return;
       }
 
       if (roomCode === '') {
-        alert('❌ Kode room tidak boleh kosong!');
+        alert('❌ Kode ruangan tidak boleh kosong!');
         return;
       }
 
       if (roomCode.length !== 6) {
-        alert('❌ Kode room harus 6 karakter!');
+        alert('❌ Kode ruangan harus 6 karakter!');
         return;
       }
 
       showLoading();
-
-      // Kirim request join room
       sendMessage('join-room', { roomCode, username });
     });
 
@@ -314,20 +301,19 @@
       }
     });
 
-    // ENTER KEY di input room code
+    // ROOM CODE INPUT: Auto-uppercase & Enter key
+    document.getElementById('roomCodeInput').addEventListener('input', (e) => {
+      e.target.value = e.target.value.toUpperCase();
+    });
+
     document.getElementById('roomCodeInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         document.getElementById('joinRoomBtn').click();
       }
     });
 
-    // Auto uppercase untuk room code
-    document.getElementById('roomCodeInput').addEventListener('input', (e) => {
-      e.target.value = e.target.value.toUpperCase();
-    });
-
     // ===================================
-    // START
+    // START APPLICATION
     // ===================================
     init();
   </script>

@@ -1,220 +1,193 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Room - Real-Time Quiz</title>
+  <title>Ruang Kuis</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Custom scrollbar untuk chat */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    * { font-family: 'Inter', sans-serif; }
+    
     .chat-container::-webkit-scrollbar {
       width: 6px;
     }
-
     .chat-container::-webkit-scrollbar-track {
-      background: #f1f1f1;
+      background: #f3f4f6;
       border-radius: 10px;
     }
-
     .chat-container::-webkit-scrollbar-thumb {
-      background: #888;
+      background: #d1d5db;
       border-radius: 10px;
     }
-
     .chat-container::-webkit-scrollbar-thumb:hover {
-      background: #555;
+      background: #9ca3af;
     }
 
-    /* Small helpers */
-    .no-select {
-      user-select: none;
+    .option-btn {
+      transition: all 0.2s ease;
+    }
+    
+    .option-btn:hover:not(:disabled) {
+      border-color: #111827;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
   </style>
 </head>
 
-<body class="bg-gray-100 min-h-screen">
-  <!-- Container Utama -->
-  <div class="container mx-auto p-4 max-w-7xl">
+<body class="bg-gray-50 min-h-screen">
+  <div class="container mx-auto p-6 max-w-6xl">
 
     <!-- Header -->
-    <div class="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg shadow-lg p-4 mb-4 text-white">
-      <div class="flex justify-between items-center">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div class="flex justify-between items-start mb-4">
         <div>
-          <h1 class="text-2xl font-bold">🎯 Room Quiz</h1>
-          <p class="text-sm opacity-90">Kode: <span id="roomCodeDisplay"
-              class="font-bold text-yellow-300 text-lg">---</span></p>
+          <h1 class="text-3xl font-bold text-gray-900">Ruang Kuis</h1>
+          <p class="text-xl text-gray-600 mt-1">Kode Ruangan: <span id="roomCodeDisplay" class="font-mono font-bold text-gray-900">---</span></p>
         </div>
         <div class="text-right">
-          <p class="text-sm opacity-90">Username:</p>
-          <p class="font-bold text-lg" id="usernameDisplay">---</p>
+          <p class="text-sm text-gray-600">Kutebak kamu pasti</p>
+          <p class="font-semibold text-gray-900" id="usernameDisplay">---</p>
         </div>
       </div>
-      <div class="mt-2 text-sm">
-        <span id="connectionStatus">🔌 Menghubungkan...</span>
-      </div>
+      <p id="connectionStatus" class="text-xs text-gray-600">🔌 Connecting...</p>
     </div>
 
-    <!-- Layout 2 Kolom -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <!-- Main Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-      <!-- KOLOM KIRI: Players + Chat -->
-      <div class="lg:col-span-1 space-y-4">
+      <!-- Left Sidebar: Players & Chat -->
+      <div class="lg:col-span-1 space-y-6">
 
-        <!-- PLAYER LIST -->
-        <div class="bg-white rounded-lg shadow-lg p-4">
-          <h2 class="text-xl font-bold mb-3 flex items-center">
-            <span class="text-2xl mr-2">👥</span>
-            Pemain Online
-            <span id="playerCount" class="ml-auto bg-blue-500 text-white px-3 py-1 rounded-full text-sm">0</span>
+        <!-- Players List -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center justify-between">
+            <span>Pemain</span>
+            <span id="playerCount" class="bg-gray-900 text-white text-xs font-bold px-3 py-1 rounded-full">0</span>
           </h2>
           <div id="playerList" class="space-y-2">
-            <!-- Player items akan diisi oleh JavaScript -->
+            <p class="text-sm text-gray-500">Memuat pemain...</p>
           </div>
         </div>
 
-        <!-- CHAT BOX -->
-        <div class="bg-white rounded-lg shadow-lg p-4">
-          <h2 class="text-xl font-bold mb-3 flex items-center">
-            <span class="text-2xl mr-2">💬</span>
-            Chat Room
-          </h2>
-
-          <!-- Chat Messages -->
-          <div id="chatMessages" class="chat-container h-64 overflow-y-auto mb-3 bg-gray-50 rounded-lg p-3 space-y-2">
-            <p class="text-gray-400 text-sm text-center">Belum ada pesan...</p>
+        <!-- Chat -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col h-96">
+          <h2 class="text-lg font-bold text-gray-900 mb-4">Obrolan</h2>
+          <div id="chatMessages" class="chat-container flex-1 overflow-y-auto mb-4 bg-gray-50 rounded-lg p-3 space-y-2">
+            <p class="text-sm text-gray-500 text-center">Belum ada pesan...</p>
           </div>
-
-          <!-- Chat Input -->
           <div class="flex gap-2">
             <input type="text" id="chatInput" placeholder="Ketik pesan..." maxlength="200"
-              class="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" />
+              class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
             <button id="sendChatBtn"
-              class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-semibold">Kirim</button>
+              class="px-4 py-2 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors">
+              Kirim
+            </button>
           </div>
         </div>
 
       </div>
 
-      <!-- KOLOM KANAN: Quiz Area -->
-      <div class="lg:col-span-2">
+      <!-- Right Content: Quiz Area -->
+      <div class="lg:col-span-2 space-y-6">
 
-        <!-- WAITING STATE -->
-        <div id="waitingState" class="bg-white rounded-lg shadow-lg p-8 text-center">
+        <!-- Waiting State -->
+        <div id="waitingState" class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
           <div class="text-6xl mb-4">⏳</div>
-          <h2 class="text-2xl font-bold text-gray-800 mb-2">Menunggu Quiz Dimulai...</h2>
-          <p class="text-gray-600 mb-6">Host akan memulai quiz sebentar lagi</p>
+          <h2 class="text-2xl font-bold text-gray-900 mb-2">Menunggu Kuis dimulai</h2>
+          <p class="text-gray-600 mb-8">Host akan segera memulai.</p>
 
           <!-- Host Controls -->
-          <div id="hostControls" class="hidden">
-            <div class="flex gap-3 mb-4">
+          <div id="hostControls" class="hidden space-y-4">
+            <div class="flex gap-3 justify-center mb-6">
               <button id="createQuestionBtn"
-                class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition font-bold shadow-lg">✏️ Buat Soal</button>
+                class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                + Buat Pertanyaan
+              </button>
               <button id="startQuizBtn"
-                class="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-lg hover:from-green-600 hover:to-green-700 transition font-bold shadow-lg hover:shadow-xl transform hover:scale-105">🚀
-                Mulai Quiz</button>
+                class="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors">
+                Mulai Kuis
+              </button>
             </div>
-            <div id="questionList" class="mb-3"></div>
-            <p class="text-sm text-gray-500">Anda adalah Host. Buat soal dulu, lalu mulai quiz.</p>
+            <div id="questionList" class="max-h-64 overflow-y-auto"></div>
           </div>
 
+          <!-- Player Waiting -->
           <div id="playerWaiting" class="hidden">
-            <p class="text-gray-500">Tunggu host memulai quiz...</p>
+            <p class="text-gray-600">Menunggu host untuk memulai...</p>
           </div>
         </div>
 
-        <!-- QUIZ STATE -->
-        <div id="quizState" class="hidden bg-white rounded-lg shadow-lg p-6">
-
-          <!-- Quiz Header -->
-          <div class="flex justify-between items-center mb-4 pb-4 border-b-2">
+        <!-- Quiz State -->
+        <div id="quizState" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+          <div class="flex justify-between items-center mb-6 pb-6 border-b border-gray-200">
             <div>
-              <p class="text-sm text-gray-500">Pertanyaan</p>
-              <p class="text-2xl font-bold text-purple-600"><span id="questionNumber">1</span> / <span
-                  id="totalQuestions">5</span></p>
+              <p class="text-sm text-gray-600">Pertanyaan</p>
+              <p class="text-2xl font-bold text-gray-900"><span id="questionNumber">1</span> / <span id="totalQuestions">5</span></p>
             </div>
             <div class="text-right">
-              <p class="text-sm text-gray-500">Waktu Tersisa</p>
-              <p id="timer" class="text-4xl font-bold text-red-500">15</p>
+              <p class="text-sm text-gray-600">Waktu Tersisa</p>
+              <p id="timer" class="text-4xl font-bold text-red-600">15</p>
             </div>
           </div>
 
-          <!-- Question -->
-          <div class="mb-6">
-            <h3 id="questionText" class="text-2xl font-bold text-gray-800 mb-4">Loading question...</h3>
-          </div>
+          <h3 id="questionText" class="text-xl font-bold text-gray-900 mb-6">Memuat pertanyaan...</h3>
 
-          <!-- Options -->
           <div id="optionsContainer" class="space-y-3 mb-6">
-            <!-- Options akan diisi oleh JavaScript -->
+            <!-- Options rendered here -->
           </div>
 
-          <!-- Submit Answer Status -->
-          <div id="answerStatus" class="hidden p-4 rounded-lg mb-4"></div>
-
+          <div id="answerStatus" class="hidden p-4 rounded-lg"></div>
         </div>
 
-        <!-- FINISHED STATE -->
-        <div id="finishedState" class="hidden bg-white rounded-lg shadow-lg p-8">
+        <!-- Finished State -->
+        <div id="finishedState" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+          <div class="text-6xl mb-4">🏆</div>
+          <h2 class="text-3xl font-bold text-gray-900 mb-2">Kuis berakhir!</h2>
+          <p class="text-gray-600 mb-8">Makasih sudah berpartisipasi</p>
 
-          <div class="text-center mb-6">
-            <div class="text-6xl mb-4">🏆</div>
-            <h2 class="text-3xl font-bold text-gray-800 mb-2">Quiz Selesai!</h2>
-            <p class="text-gray-600">Terima kasih sudah bermain</p>
-          </div>
-
-          <!-- Leaderboard Final -->
-          <div class="mb-6">
-            <h3 class="text-xl font-bold mb-3 text-center">🥇 Leaderboard Final</h3>
+          <div class="mb-8">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Papan Skor Akhir</h3>
             <div id="finalLeaderboard" class="space-y-2"></div>
           </div>
 
-          <!-- Review Button -->
-          <div class="text-center">
             <button id="viewReviewBtn"
-              class="bg-purple-500 text-white px-6 py-3 rounded-lg hover:bg-purple-600 transition font-bold">📊 Lihat
-              Review Jawaban Saya</button>
-          </div>
-
+            class="px-6 py-3 bg-gray-900 text-white font-semibold rounded-lg hover:bg-black transition-colors">
+            Lihat Hasil
+          </button>
         </div>
 
-        <!-- REVIEW STATE -->
-        <div id="reviewState" class="hidden bg-white rounded-lg shadow-lg p-6">
-
+        <!-- Review State -->
+        <div id="reviewState" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 p-8">
           <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold text-gray-800">📊 Review Jawaban Anda</h2>
-            <button id="backToLeaderboardBtn" class="text-blue-600 hover:text-blue-800 underline">← Kembali ke
-              Leaderboard</button>
+            <h2 class="text-2xl font-bold text-gray-900">Hasilmu</h2>
+            <button id="backToLeaderboardBtn" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+              ← Kembali
+            </button>
           </div>
 
-          <!-- Review Summary -->
-          <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 mb-6">
-            <div class="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p class="text-sm text-gray-600">Total Skor</p>
-                <p id="reviewScore" class="text-3xl font-bold text-purple-600">0</p>
-              </div>
-              <div>
-                <p class="text-sm text-gray-600">Benar</p>
-                <p id="reviewCorrect" class="text-3xl font-bold text-green-600">0</p>
-              </div>
-              <div>
-                <p class="text-sm text-gray-600">Salah</p>
-                <p id="reviewWrong" class="text-3xl font-bold text-red-600">0</p>
-              </div>
+          <div class="grid grid-cols-3 gap-4 mb-8 p-4 bg-gray-50 rounded-lg">
+            <div class="text-center">
+              <p class="text-sm text-gray-600">Skor</p>
+              <p id="reviewScore" class="text-3xl font-bold text-gray-900">0</p>
+            </div>
+            <div class="text-center">
+              <p class="text-sm text-gray-600">Benar</p>
+              <p id="reviewCorrect" class="text-3xl font-bold text-green-600">0</p>
+            </div>
+            <div class="text-center">
+              <p class="text-sm text-gray-600">Salah</p>
+              <p id="reviewWrong" class="text-3xl font-bold text-red-600">0</p>
             </div>
           </div>
 
-          <!-- Review Questions -->
           <div id="reviewQuestions" class="space-y-4"></div>
-
         </div>
 
-        <!-- REALTIME LEADERBOARD (Sidebar) -->
-        <div id="realtimeLeaderboard"
-          class="hidden bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg shadow-lg p-6 mt-4">
-          <h3 class="text-xl font-bold mb-4 flex items-center"><span class="text-2xl mr-2">🏆</span>Leaderboard
-            Sementara</h3>
+        <!-- Leaderboard -->
+        <div id="realtimeLeaderboard" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Papan Skor</h3>
           <div id="leaderboardList" class="space-y-2"></div>
         </div>
 
@@ -222,103 +195,94 @@
 
     </div>
 
-    <!-- Leave Room Button -->
-    <div class="mt-4 text-center">
-      <button id="leaveRoomBtn" class="text-red-600 hover:text-red-800 underline font-semibold">🚪 Keluar dari
-        Room</button>
+    <!-- Leave Button -->
+      <div class="text-center mt-8">
+      <button id="leaveRoomBtn" class="text-red-600 hover:text-red-800 text-sm font-medium">
+        ← Keluar Ruangan
+      </button>
     </div>
 
   </div>
 
-  <!-- Modal: Create Question -->
-  <div id="questionModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
-      <h2 class="text-2xl font-bold mb-4">✏️ Buat Soal Baru</h2>
+  <!-- Question Modal -->
+  <div id="questionModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-8 w-full max-w-lg mx-4 max-h-96 overflow-y-auto">
+      <h2 class="text-2xl font-bold text-gray-900 mb-6">Buat Pertanyaan</h2>
 
-      <form id="questionForm">
-        <div class="mb-4">
-          <label class="block text-gray-700 text-sm font-bold mb-2">Pertanyaan:</label>
+      <form id="questionForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-900 mb-2">Pertanyaan</label>
           <textarea id="modalQuestionText" rows="3" placeholder="Masukkan pertanyaan..."
-            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10"
             required></textarea>
         </div>
 
-        <div class="space-y-3 mb-4">
-          <label class="block text-gray-700 text-sm font-bold">Opsi Jawaban:</label>
-          <div class="grid gap-2">
-            <input type="text" id="modalOptionA" placeholder="Opsi A" class="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-            <input type="text" id="modalOptionB" placeholder="Opsi B" class="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-            <input type="text" id="modalOptionC" placeholder="Opsi C" class="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-            <input type="text" id="modalOptionD" placeholder="Opsi D" class="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+        <div>
+          <label class="block text-sm font-semibold text-gray-900 mb-2">Pilihan</label>
+          <div class="space-y-2">
+            <input type="text" id="modalOptionA" placeholder="Pilihan A" 
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10" required>
+            <input type="text" id="modalOptionB" placeholder="Pilihan B" 
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10" required>
+            <input type="text" id="modalOptionC" placeholder="Pilihan C" 
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10" required>
+            <input type="text" id="modalOptionD" placeholder="Pilihan D" 
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10" required>
           </div>
         </div>
 
-        <div class="mb-4">
-          <label class="block text-gray-700 text-sm font-bold mb-2">Jawaban yang Benar:</label>
-          <select id="modalCorrectAnswer" class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:shadow-outline" required>
-            <option value="">Pilih jawaban benar...</option>
-            <option value="0">A</option>
-            <option value="1">B</option>
-            <option value="2">C</option>
-            <option value="3">D</option>
-          </select>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-900 mb-2">Jawaban Benar</label>
+            <select id="modalCorrectAnswer" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10" required>
+              <option value="">Pilih...</option>
+              <option value="0">A</option>
+              <option value="1">B</option>
+              <option value="2">C</option>
+              <option value="3">D</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-900 mb-2">Waktu (detik)</label>
+            <input type="number" id="modalTimerValue" min="10" max="300" value="15" 
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10" required>
+          </div>
         </div>
 
-        <div class="mb-6">
-          <label class="block text-gray-700 text-sm font-bold mb-2">Waktu (detik):</label>
-          <input type="number" id="modalTimerValue" min="10" max="300" value="15"
-            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
-        </div>
-
-        <div class="flex gap-3">
-          <button type="button" id="cancelQuestionBtn" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600 transition">
+        <div class="flex gap-3 pt-4">
+          <button type="button" id="cancelQuestionBtn" 
+            class="flex-1 px-4 py-2 border border-gray-300 text-gray-900 rounded-lg hover:bg-gray-50">
             Batal
           </button>
-          <button type="submit" class="flex-1 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition">
-            Tambah Soal
+          <button type="submit" 
+            class="flex-1 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-black">
+            Tambah Pertanyaan
           </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Optional: external WebSocket helper (jika ada) -->
-  <!-- <script src="/js/ws-client.js"></script> -->
+  <script src="/js/ws-client.js"></script>
 
   <script>
-    /* =====================================================
-       Real-time Quiz Room - Client Script (rapi & lengkap)
-       - Semua fungsi dijelaskan singkat di komentar
-       - Menggunakan WebSocket standar
-       ===================================================== */
-
-    // ======= GLOBAL VARS =======
     let ws = null;
     let clientId = null;
     let username = null;
     let roomCode = null;
     let isHost = false;
     let isConnected = false;
-
-    // Quiz state
-    let currentQuizState = 'waiting'; // 'waiting' | 'quiz' | 'finished' | 'review'
+    let currentQuizState = 'waiting';
     let currentQuestion = null;
     let questionStartTime = null;
     let timerInterval = null;
     let hasAnswered = false;
-    // Manual mode: when the user opens Review, we prevent automatic state changes
     let manualReviewOpen = false;
-
-    // Data
     let players = [];
     let chatMessages = [];
     let myReviewData = null;
     let customQuestions = [];
 
-    // Simple reconnect backoff (ms)
-    const RECONNECT_DELAY = 3000;
-
-    // ======= HELPERS =======
     function escapeHtml(text = '') {
       const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
       return String(text).replace(/[&<>"']/g, m => map[m]);
@@ -326,95 +290,65 @@
 
     function byId(id) { return document.getElementById(id); }
 
-    // ===================================
-    // INITIALIZATION
-    // ===================================
     function init() {
-      // Ambil data dari localStorage
       username = localStorage.getItem('username');
       roomCode = localStorage.getItem('currentRoomCode');
       isHost = localStorage.getItem('isHost') === 'true';
       clientId = localStorage.getItem('clientId');
 
-      console.log('🔧 Init room.html:', { username, roomCode, isHost, clientId });
-
-      // Validasi
       if (!username || !roomCode) {
-        alert('❌ Data tidak lengkap! Redirect ke lobby...');
+        alert('Data hilang! Mengalihkan...');
         window.location.href = '/lobby.html';
         return;
       }
 
-      // Tampilkan info
-      document.getElementById('usernameDisplay').textContent = username;
-      document.getElementById('roomCodeDisplay').textContent = roomCode;
+      byId('usernameDisplay').textContent = username;
+      byId('roomCodeDisplay').textContent = roomCode;
 
-      // Initially show controls based on localStorage (will be updated after room-data)
       if (isHost) {
-        document.getElementById('hostControls').classList.remove('hidden');
-        document.getElementById('playerWaiting').classList.add('hidden');
+        byId('hostControls').classList.remove('hidden');
+        byId('playerWaiting').classList.add('hidden');
       } else {
-        document.getElementById('hostControls').classList.add('hidden');
-        document.getElementById('playerWaiting').classList.remove('hidden');
+        byId('hostControls').classList.add('hidden');
+        byId('playerWaiting').classList.remove('hidden');
       }
 
-      // Inisialisasi WebSocket
       initWebSocket();
     }
-    // ======= WEBSOCKET SETUP =======
+
     function initWebSocket() {
-      try {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host;
-        const wsUrl = `${protocol}//${host}`;
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      const wsUrl = `${protocol}//${host}`;
 
-        console.log("Menghubungkan ke:", wsUrl);
-        ws = new WebSocket(wsUrl);
-
-      } catch (err) {
-        console.error('❌ Gagal membuat WebSocket:', err);
-        byId('connectionStatus').innerHTML = '❌ <span class="font-semibold text-red-300">Gagal koneksi</span>';
-        // Coba reconnect
-        setTimeout(initWebSocket, RECONNECT_DELAY);
-        return;
-      }
+      console.log("Connecting to:", wsUrl);
+      ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
         console.log('✅ WebSocket connected');
         isConnected = true;
-        byId('connectionStatus').innerHTML = '✅ <span class="font-semibold">Terhubung</span>';
-
-        // Minta data room setelah connect (beri sedikit jeda agar server siap)
+        byId('connectionStatus').innerHTML = '✅ <span class="text-green-600 font-medium">Connected</span>';
         setTimeout(() => sendMessage('get-room-data', { roomCode, username }), 500);
       };
 
       ws.onmessage = (event) => {
         try {
           const { type, data } = JSON.parse(event.data);
-          console.log('📩 Received:', type, data);
+          console.log('📩 Received:', type);
           handleMessage(type, data);
         } catch (error) {
-          console.error('❌ Error parsing message:', error, event.data);
+          console.error('Error parsing message:', error);
         }
       };
 
-      ws.onclose = (ev) => {
-        console.log('❌ WebSocket disconnected', ev);
+      ws.onclose = () => {
+        console.log('❌ WebSocket disconnected');
         isConnected = false;
-        byId('connectionStatus').innerHTML = '❌ <span class="font-semibold text-red-300">Terputus</span>';
-        // Auto reconnect
-        setTimeout(() => {
-          console.log('🔄 Reconnecting...');
-          initWebSocket();
-        }, RECONNECT_DELAY);
-      };
-
-      ws.onerror = (error) => {
-        console.error('❌ WebSocket error:', error);
+        byId('connectionStatus').innerHTML = '❌ <span class="text-red-600 font-medium">Disconnected</span>';
+        setTimeout(() => initWebSocket(), 3000);
       };
     }
 
-    // ======= MESSAGE HANDLER =======
     function handleMessage(type, data) {
       switch (type) {
         case 'connected':
@@ -427,72 +361,27 @@
           chatMessages = data.room.chat || [];
           updatePlayerList();
           updateChatMessages();
-
-          // Update host status
           isHost = data.isHost;
           localStorage.setItem('isHost', isHost ? 'true' : 'false');
-
-          // Show/hide host controls
           if (isHost) {
             byId('hostControls').classList.remove('hidden');
             byId('playerWaiting').classList.add('hidden');
-          } else {
-            byId('hostControls').classList.add('hidden');
-            byId('playerWaiting').classList.remove('hidden');
           }
-
-          // Don't auto-navigate away if user is currently viewing their review
-          const isViewingReview = currentQuizState === 'review';
-          if (data.room.quiz && data.room.quiz.status === 'playing') {
-            if (!isViewingReview && !manualReviewOpen) {
-              console.log('🔁 room-data: switching to quiz because room is playing');
-              switchState('quiz');
-              byId('realtimeLeaderboard').classList.remove('hidden');
-            } else {
-              console.log('🔕 room-data: quiz playing but user is viewing review or manualReviewOpen=true; skip switch');
-            }
-            // If server provided a start time for the current question, compute and sync the remaining time
-            const qStart = data.room.quiz.questionStartTime;
-            const qTimer = data.room.quiz.questionTimer;
-            if (qStart && qTimer) {
-              // If a question is already shown, don't overwrite question text/options - just sync timer
-              const elapsed = Math.floor((Date.now() - qStart) / 1000);
-              const remaining = Math.max(0, qTimer - elapsed);
-              // Set questionStartTime so submitAnswer uses it to compute timeToAnswer
-              questionStartTime = qStart;
-              startTimer(remaining);
-            }
-          } else if (data.room.quiz && data.room.quiz.status === 'finished') {
-            if (!isViewingReview && !manualReviewOpen) {
-              console.log('🔁 room-data: switching to finished because room is finished');
-              switchState('finished');
-            } else {
-              console.log('🔕 room-data: room finished but user is viewing review or manualReviewOpen=true; skip switch');
-            }
+          if (data.room.quiz && data.room.quiz.status === 'playing' && !manualReviewOpen) {
+            switchState('quiz');
+            byId('realtimeLeaderboard').classList.remove('hidden');
           }
           break;
 
         case 'player-joined':
           players = data.players || [];
           updatePlayerList();
-          addSystemMessage(`${data.username} bergabung ke room`);
+          addSystemMessage(`${data.username} joined`);
           break;
 
         case 'player-left':
           players = data.players || [];
           updatePlayerList();
-          addSystemMessage(`${data.username} keluar dari room`);
-          break;
-
-        case 'new-host':
-          addSystemMessage(`${data.hostUsername} sekarang menjadi host`);
-          if (data.hostClientId === clientId) {
-            isHost = true;
-            localStorage.setItem('isHost', 'true');
-            // Show host controls without reloading the page
-            byId('hostControls').classList.remove('hidden');
-            byId('playerWaiting').classList.add('hidden');
-          }
           break;
 
         case 'new-chat':
@@ -500,22 +389,12 @@
           break;
 
         case 'quiz-started':
-          addSystemMessage('🎯 Quiz dimulai! Bersiap...');
-          setTimeout(() => {
-            if (!manualReviewOpen && currentQuizState !== 'review') {
-              console.log('🔁 quiz-started: switching to quiz');
-              switchState('quiz');
-              byId('realtimeLeaderboard').classList.remove('hidden');
-            } else {
-              console.log('🔕 quiz-started: skipping switch because manualReviewOpen or currentQuizState === review');
-            }
-          }, 800);
+          addSystemMessage('Quiz started!');
+          setTimeout(() => switchState('quiz'), 800);
           break;
 
         case 'new-question':
-          // If user is manually viewing review, don't interrupt
           if (!manualReviewOpen) displayQuestion(data);
-          else console.log('🔕 new-question event skipped due to manualReviewOpen');
           break;
 
         case 'answer-submitted':
@@ -528,103 +407,60 @@
 
         case 'quiz-finished':
           displayFinalLeaderboard(data.leaderboard || []);
-          // If the user is viewing their review, don't override it. Otherwise switch to finished view.
-          if (!manualReviewOpen && currentQuizState !== 'review') {
-            switchState('finished');
-          }
-          addSystemMessage('🏁 ' + (data.message || 'Quiz selesai'));
+          if (!manualReviewOpen) switchState('finished');
           break;
 
         case 'player-review':
-          // When review is displayed, mark manualReviewOpen to avoid auto switching
           manualReviewOpen = true;
           displayReview(data);
           break;
-
-        case 'error':
-          alert('❌ ' + (data.message || 'Unknown error'));
-          break;
-
-        default:
-          console.warn('Unhandled message type:', type);
       }
     }
 
-    // ======= SEND MESSAGE (helper) =======
     function sendMessage(type, data = {}) {
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type, data }));
-        return true;
-      } else {
-        console.error('❌ WebSocket not connected');
-        // Optional: queue messages or show toast
-        return false;
       }
     }
 
-    // ======= UI: SWITCH STATE =======
     function switchState(state) {
       const states = ['waitingState', 'quizState', 'finishedState', 'reviewState'];
       states.forEach(s => byId(s).classList.add('hidden'));
-
       if (state === 'waiting') byId('waitingState').classList.remove('hidden');
       if (state === 'quiz') byId('quizState').classList.remove('hidden');
       if (state === 'finished') byId('finishedState').classList.remove('hidden');
       if (state === 'review') byId('reviewState').classList.remove('hidden');
-
       currentQuizState = state;
     }
 
-    // ======= UI: PLAYER LIST =======
     function updatePlayerList() {
       const container = byId('playerList');
       byId('playerCount').textContent = players.length;
-
       if (!players || players.length === 0) {
-        container.innerHTML = '<p class="text-gray-400 text-sm">Belum ada pemain...</p>';
+        container.innerHTML = '<p class="text-sm text-gray-500">No players yet...</p>';
         return;
       }
-
-      container.innerHTML = players.map((player, index) => {
-        const isMe = player.clientId === clientId;
-        return `
-          <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-            <div class="flex items-center gap-2">
-              <span class="text-2xl">${index === 0 ? '👑' : '👤'}</span>
-              <div>
-                <p class="font-semibold text-gray-800">${escapeHtml(player.username)}</p>
-                ${isMe ? '<p class="text-xs text-blue-600">Anda</p>' : ''}
-              </div>
-            </div>
-            <div class="text-right">
-              <p class="font-bold text-lg text-purple-600">${player.score ?? 0}</p>
-              <p class="text-xs text-gray-500">poin</p>
-            </div>
-          </div>
-        `;
-      }).join('');
+      container.innerHTML = players.map((p, i) => `
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <div><p class="font-semibold text-gray-900">${escapeHtml(p.username)}</p></div>
+          <div class="text-right"><p class="font-bold text-gray-900">${p.score ?? 0}</p></div>
+        </div>
+      `).join('');
     }
 
-    // ======= UI: CHAT =======
     function updateChatMessages() {
       const container = byId('chatMessages');
-
       if (!chatMessages || chatMessages.length === 0) {
-        container.innerHTML = '<p class="text-gray-400 text-sm text-center">Belum ada pesan...</p>';
+        container.innerHTML = '<p class="text-sm text-gray-500 text-center">No messages yet...</p>';
         return;
       }
-
       container.innerHTML = chatMessages.map(msg => {
-        const time = new Date(msg.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        const time = new Date(msg.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
         return `
-          <div class="bg-white rounded-lg p-2 shadow-sm">
-            <p class="text-xs text-gray-500 mb-1"><span class="font-semibold text-purple-600">${escapeHtml(msg.username)}</span> <span class="ml-2">${time}</span></p>
-            <p class="text-sm text-gray-800">${escapeHtml(msg.message)}</p>
-          </div>
+          <div class="bg-white rounded p-2"><p class="text-xs text-gray-600 mb-1"><strong>${escapeHtml(msg.username)}</strong> ${time}</p>
+          <p class="text-sm text-gray-800">${escapeHtml(msg.message)}</p></div>
         `;
       }).join('');
-
-      // Auto scroll ke bawah
       container.scrollTop = container.scrollHeight;
     }
 
@@ -635,78 +471,45 @@
 
     function addSystemMessage(message) {
       const container = byId('chatMessages');
-      const time = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-      const msgHtml = `
-        <div class="bg-blue-50 rounded-lg p-2 border-l-4 border-blue-500">
-          <p class="text-xs text-blue-600 mb-1">${time}</p>
-          <p class="text-sm text-blue-800 font-semibold">${escapeHtml(message)}</p>
-        </div>
-      `;
-
-      if (container.querySelector('.text-gray-400')) {
-        container.innerHTML = msgHtml;
-      } else {
-        container.innerHTML += msgHtml;
-      }
-
+      container.innerHTML += `<div class="bg-blue-50 rounded p-2 border-l-4 border-blue-500">
+        <p class="text-xs text-blue-700 font-semibold">${escapeHtml(message)}</p></div>`;
       container.scrollTop = container.scrollHeight;
     }
 
-    // ======= UI: QUIZ - DISPLAY QUESTION =======
     function displayQuestion(data) {
-      // If user is in review mode, do not interrupt (leave them in the review view)
-      if (currentQuizState === 'review') {
-        console.log('🔕 Skipping displayQuestion because user is viewing review');
-        return;
-      }
+      if (currentQuizState === 'review') return;
       currentQuestion = data;
       hasAnswered = false;
-      // If server provided startTime (ms since epoch), use it so clients resync correctly.
-      // Otherwise fallback to client now.
-      if (data && data.startTime) {
-        questionStartTime = data.startTime;
-      } else {
-        questionStartTime = Date.now();
-      }
+      questionStartTime = data.startTime || Date.now();
 
       byId('questionNumber').textContent = data.questionNumber ?? 1;
       byId('totalQuestions').textContent = data.totalQuestions ?? 1;
       byId('questionText').textContent = data.question ?? '—';
-
-      // Hide answer status & host next button (guarding missing UI elements)
       byId('answerStatus').classList.add('hidden');
-      const hostNextEl = byId('hostNextBtn');
-      if (hostNextEl) hostNextEl.classList.add('hidden');
 
-      // Build options
       const optionsContainer = byId('optionsContainer');
       optionsContainer.innerHTML = (data.options || []).map((option, index) => `
-        <button class="option-btn w-full text-left p-4 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 rounded-lg border-2 border-blue-200 hover:border-blue-400 transition font-semibold text-gray-800" data-index="${index}">
+        <button class="option-btn w-full text-left p-4 bg-gray-50 hover:bg-white border-2 border-gray-200 rounded-lg transition font-semibold text-gray-900" data-index="${index}">
           <span class="text-lg mr-3">${String.fromCharCode(65 + index)}.</span>
           ${escapeHtml(option)}
         </button>
       `).join('');
 
-      // Add click handlers
       document.querySelectorAll('.option-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           if (!hasAnswered) submitAnswer(parseInt(btn.dataset.index));
         });
       });
 
-      // Start timer. If server provided a startTime, compute remaining time accordingly.
       let remaining = data.timer ?? 15;
-      if (data && data.startTime) {
+      if (data.startTime) {
         const elapsed = Math.floor((Date.now() - data.startTime) / 1000);
         remaining = Math.max(0, (data.timer || 15) - elapsed);
       }
       startTimer(remaining);
-
-      // Switch to quiz state
       switchState('quiz');
     }
 
-    // ======= UI: TIMER =======
     function startTimer(seconds) {
       let timeLeft = Math.max(0, parseInt(seconds, 10) || 0);
       const timerElement = byId('timer');
@@ -714,7 +517,7 @@
       if (timerInterval) clearInterval(timerInterval);
 
       timerElement.textContent = timeLeft;
-      timerElement.className = 'text-4xl font-bold text-green-500';
+      timerElement.className = 'text-4xl font-bold text-green-600';
 
       timerInterval = setInterval(() => {
         timeLeft--;
@@ -722,328 +525,188 @@
         timerElement.textContent = timeLeft;
 
         if (timeLeft <= 5) {
-          timerElement.className = 'text-4xl font-bold text-red-500 animate-pulse';
+          timerElement.className = 'text-4xl font-bold text-red-600 animate-pulse';
         } else if (timeLeft <= 10) {
-          timerElement.className = 'text-4xl font-bold text-yellow-500';
+          timerElement.className = 'text-4xl font-bold text-yellow-600';
         }
 
         if (timeLeft <= 0) {
           clearInterval(timerInterval);
-
-          // Disable options if not answered
           if (!hasAnswered) {
             document.querySelectorAll('.option-btn').forEach(btn => {
               btn.disabled = true;
-              btn.classList.add('opacity-50', 'cursor-not-allowed');
+              btn.classList.add('opacity-50');
             });
-
-            byId('answerStatus').innerHTML = `
-              <div class="bg-red-100 border-2 border-red-300 text-red-800 p-4 rounded-lg text-center">
-                <p class="font-bold text-lg">⏰ Waktu Habis!</p>
-                <p class="text-sm">Anda tidak menjawab soal ini.</p>
-              </div>
-            `;
-            byId('answerStatus').classList.remove('hidden');
           }
-
-          // Show next button for host (guard DOM element)
-          if (isHost) setTimeout(() => { const el = byId('hostNextBtn'); if (el) el.classList.remove('hidden'); }, 1200);
         }
       }, 1000);
     }
 
-    // ======= QUIZ: SUBMIT ANSWER =======
     function submitAnswer(answerIndex) {
       if (hasAnswered || !currentQuestion) return;
       hasAnswered = true;
 
       const timeToAnswer = parseFloat(((Date.now() - questionStartTime) / 1000).toFixed(1));
-
-      // Disable all options
       document.querySelectorAll('.option-btn').forEach(btn => {
         btn.disabled = true;
-        btn.classList.add('opacity-50', 'cursor-not-allowed');
+        btn.classList.add('opacity-50');
       });
 
-      // Highlight selected
-      const selectedBtn = document.querySelector(`[data-index="${answerIndex}"]`);
-      if (selectedBtn) selectedBtn.classList.add('ring-4', 'ring-blue-500');
-
-      // Send to server
       sendMessage('submit-answer', { roomCode, answerIndex, timeToAnswer });
-      console.log(`✅ Submitted answer: ${answerIndex}, time: ${timeToAnswer}s`);
     }
 
-    // ======= QUIZ: SHOW ANSWER RESULT =======
     function showAnswerResult(data) {
       const statusDiv = byId('answerStatus');
-
       document.querySelectorAll('.option-btn').forEach(btn => {
         const index = parseInt(btn.dataset.index, 10);
         if (index === data.correctAnswer) {
-          btn.classList.remove('from-blue-50', 'to-blue-100', 'border-blue-200');
-          btn.classList.add('from-green-200', 'to-green-300', 'border-green-500', 'ring-4', 'ring-green-400');
+          btn.classList.add('ring-2', 'ring-green-500', 'bg-green-50');
         }
       });
 
       if (data.isCorrect) {
-        statusDiv.innerHTML = `
-          <div class="bg-green-100 border-2 border-green-400 text-green-800 p-4 rounded-lg text-center">
-            <p class="font-bold text-2xl mb-2">✅ Benar!</p>
-            <p class="text-lg">+${data.points} poin</p>
-            <p class="text-sm mt-1">Skor Anda: ${data.newScore}</p>
-          </div>
-        `;
+        statusDiv.innerHTML = `<div class="bg-green-50 border-2 border-green-200 text-green-900 p-4 rounded-lg text-center">
+          <p class="font-bold text-lg">✅ Benar!</p><p class="text-sm">+${data.points} poin</p></div>`;
       } else {
-        statusDiv.innerHTML = `
-          <div class="bg-red-100 border-2 border-red-400 text-red-800 p-4 rounded-lg text-center">
-            <p class="font-bold text-2xl mb-2">❌ Salah!</p>
-            <p class="text-sm">Jawaban yang benar: <strong>${escapeHtml(data.correctAnswerText || '')}</strong></p>
-            <p class="text-sm mt-1">Skor Anda: ${data.newScore}</p>
-          </div>
-        `;
+        statusDiv.innerHTML = `<div class="bg-red-50 border-2 border-red-200 text-red-900 p-4 rounded-lg text-center">
+          <p class="font-bold text-lg">❌ Salah</p><p class="text-sm">Jawaban benar: <strong>${escapeHtml(data.correctAnswerText || '')}</strong></p></div>`;
       }
-
       statusDiv.classList.remove('hidden');
-
       if (timerInterval) clearInterval(timerInterval);
-
-      if (isHost) setTimeout(() => { const el = byId('hostNextBtn'); if (el) el.classList.remove('hidden'); }, 1200);
     }
 
-    // ======= UI: LEADERBOARD =======
     function updateLeaderboard(leaderboard) {
       const container = byId('leaderboardList');
-      container.innerHTML = (leaderboard || []).map((player, index) => {
-        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '👤';
-        const isMe = player.username === username;
-        return `
-          <div class="flex items-center justify-between p-3 ${isMe ? 'bg-purple-100 border-2 border-purple-400' : 'bg-white'} rounded-lg shadow">
-            <div class="flex items-center gap-2">
-              <span class="text-2xl">${medal}</span>
-              <div>
-                <p class="font-semibold ${isMe ? 'text-purple-700' : 'text-gray-800'}">${escapeHtml(player.username)} ${isMe ? '(Anda)' : ''}</p>
-                <p class="text-xs text-gray-500">Jawaban: ${player.answeredCount ?? 0}</p>
-              </div>
-            </div>
-            <p class="font-bold text-xl text-purple-600">${player.score ?? 0}</p>
-          </div>
-        `;
-      }).join('');
+      container.innerHTML = (leaderboard || []).map((p, i) => `
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <div><p class="font-semibold text-gray-900">${escapeHtml(p.username)}</p></div>
+          <div class="text-right"><p class="font-bold text-lg text-gray-900">${p.score ?? 0}</p></div>
+        </div>
+      `).join('');
     }
 
-    // ======= UI: FINAL LEADERBOARD =======
     function displayFinalLeaderboard(leaderboard) {
       const container = byId('finalLeaderboard');
-      container.innerHTML = (leaderboard || []).map((player, index) => {
-        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
-        const isMe = player.username === username;
-        return `
-          <div class="flex items-center justify-between p-4 ${isMe ? 'bg-gradient-to-r from-purple-100 to-pink-100 border-2 border-purple-400' : 'bg-gray-50'} rounded-lg shadow-lg">
-            <div class="flex items-center gap-3">
-              <span class="text-3xl font-bold">${medal}</span>
-              <div>
-                <p class="font-bold text-lg ${isMe ? 'text-purple-700' : 'text-gray-800'}">${escapeHtml(player.username)} ${isMe ? '(Anda)' : ''}</p>
-                <!-- todo: jawaban benar/ total soal (akurasi) -->
-                <p class="text-sm text-gray-600">${player.correctAnswers ?? 0}/${player.totalAnswers ?? 0} benar (${player.accuracy ?? 0}%)</p>
-              </div>
-            </div>
-            <div class="text-right">
-              <p class="font-bold text-2xl text-purple-600">${player.score ?? 0}</p>
-              <p class="text-xs text-gray-500">poin</p>
-            </div>
-          </div>
-        `;
-      }).join('');
+      container.innerHTML = (leaderboard || []).map((p, i) => `
+        <div class="flex items-center justify-between p-4 ${p.username === username ? 'bg-blue-50 border-2 border-blue-300' : 'bg-gray-50'} rounded-lg">
+          <div><p class="font-bold text-gray-900">${i + 1}. ${escapeHtml(p.username)} ${p.username === username ? '(You)' : ''}</p></div>
+          <div class="text-right"><p class="font-bold text-lg text-gray-900">${p.score ?? 0}</p></div>
+        </div>
+      `).join('');
     }
 
-    // ======= UI: REVIEW =======
     function displayReview(data) {
-      console.log('🔎 displayReview called, manualReviewOpen=', manualReviewOpen);
       myReviewData = data;
       byId('reviewScore').textContent = data.score ?? 0;
       byId('reviewCorrect').textContent = data.totalCorrect ?? 0;
       byId('reviewWrong').textContent = (data.totalQuestions ?? 0) - (data.totalCorrect ?? 0);
 
       const container = byId('reviewQuestions');
-      container.innerHTML = (data.answers || []).map((answer, index) => {
-        const isCorrect = answer.isCorrect;
-        const bgColor = isCorrect ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300';
-        const icon = isCorrect ? '✅' : '❌';
-
-        const optionsHtml = (answer.options || []).map((option, optIndex) => {
-          let optionClass = 'bg-white border-2 border-gray-200';
-          let label = '';
-          if (optIndex === answer.correctAnswer) { optionClass = 'bg-green-200 border-green-500 font-bold'; label = '<span class="text-green-700">(Jawaban Benar)</span>'; }
-          if (optIndex === answer.selectedAnswer && !isCorrect) { optionClass = 'bg-red-200 border-red-500 font-bold'; label = '<span class="text-red-700">(Jawaban Anda)</span>'; }
-          return `<div class="${optionClass} rounded p-3"><span class="font-semibold">${String.fromCharCode(65 + optIndex)}.</span> ${escapeHtml(option)} ${label}</div>`;
-        }).join('');
-
+      container.innerHTML = (data.answers || []).map((a, i) => {
+        const isCorrect = a.isCorrect;
         return `
-          <div class="${bgColor} border-2 rounded-lg p-4">
-            <div class="flex items-start justify-between mb-3">
-              <div class="flex-1"><p class="font-bold text-gray-800 mb-2">${icon} Soal ${index + 1}: ${escapeHtml(answer.question)}</p></div>
-              <div class="text-right ml-4"><p class="text-sm text-gray-600">Waktu</p><p class="font-bold">${answer.timeToAnswer}s</p></div>
+          <div class="${isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border-2 rounded-lg p-4">
+            <p class="font-bold text-gray-900 mb-2">${isCorrect ? '✅' : '❌'} Question ${i + 1}</p>
+            <p class="text-gray-800 mb-3">${escapeHtml(a.question)}</p>
+            <div class="space-y-2">
+              ${(a.options || []).map((opt, j) => {
+                let cls = 'bg-white border-gray-300';
+                if (j === a.correctAnswer) cls = 'bg-green-100 border-green-500';
+                if (j === a.selectedAnswer && !isCorrect) cls = 'bg-red-100 border-red-500';
+                return `<div class="border-2 ${cls} rounded p-2"><span class="font-semibold">${String.fromCharCode(65 + j)}.</span> ${escapeHtml(opt)}</div>`;
+              }).join('')}
             </div>
-            <div class="space-y-2">${optionsHtml}</div>
-            <div class="mt-3 text-right"><p class="text-sm ${isCorrect ? 'text-green-700' : 'text-red-700'} font-semibold">${isCorrect ? `+${answer.pointsEarned} poin` : '0 poin'}</p></div>
+            <p class="text-sm mt-3 font-semibold ${isCorrect ? 'text-green-700' : 'text-red-700'}">${isCorrect ? '+' + a.pointsEarned : '0'} pts (${a.timeToAnswer}s)</p>
           </div>
         `;
       }).join('');
-
       switchState('review');
     }
 
-    // ======= UI: QUESTION CREATION =======
     function showQuestionModal() {
       byId('questionModal').classList.remove('hidden');
-      resetQuestionForm();
     }
 
     function hideQuestionModal() {
       byId('questionModal').classList.add('hidden');
     }
 
-    function resetQuestionForm() {
-      byId('questionForm').reset();
-    }
-
-    function saveQuestion(event) {
-      event.preventDefault();
-
+    function saveQuestion(e) {
+      e.preventDefault();
       const question = byId('modalQuestionText').value.trim();
-      const options = [
-        byId('modalOptionA').value.trim(),
-        byId('modalOptionB').value.trim(),
-        byId('modalOptionC').value.trim(),
-        byId('modalOptionD').value.trim()
-      ];
+      const options = [byId('modalOptionA').value.trim(), byId('modalOptionB').value.trim(), byId('modalOptionC').value.trim(), byId('modalOptionD').value.trim()];
       const correctIndex = parseInt(byId('modalCorrectAnswer').value);
       const timer = parseInt(byId('modalTimerValue').value);
 
-      // Validate
-      if (!question) {
-        alert('Pertanyaan tidak boleh kosong!');
-        return;
-      }
-      if (options.some(opt => !opt)) {
-        alert('Semua opsi jawaban harus diisi!');
-        return;
-      }
-      if (isNaN(correctIndex) || correctIndex < 0 || correctIndex > 3) {
-        alert('Pilih jawaban yang benar!');
-        return;
-      }
-      if (timer < 10 || timer > 300) {
-        alert('Waktu harus antara 10-300 detik!');
+      if (!question || options.some(o => !o) || isNaN(correctIndex) || timer < 10) {
+        alert('Please fill all fields');
         return;
       }
 
-      const newQuestion = {
-        question,
-        options,
-        correct: correctIndex,
-        timer
-      };
-
-      customQuestions.push(newQuestion);
+      customQuestions.push({ question, options, correct: correctIndex, timer });
       updateQuestionList();
       hideQuestionModal();
-      console.log('✅ Soal tersimpan:', newQuestion);
     }
 
     function updateQuestionList() {
       const container = byId('questionList');
       if (customQuestions.length === 0) {
-        container.innerHTML = '<p class="text-gray-500 text-sm text-center">Belum ada soal...</p>';
+        container.innerHTML = '<p class="text-gray-600 text-sm">No questions yet</p>';
         return;
       }
-
-      container.innerHTML = customQuestions.map((q, index) => `
-        <div class="bg-white p-4 rounded-lg border-2 border-gray-200 mb-2">
-          <div class="flex justify-between items-start">
-            <div class="flex-1">
-              <h4 class="font-bold text-purple-600">Soal ${index + 1} (${q.timer}s)</h4>
-              <p class="text-gray-800 mb-2">${escapeHtml(q.question)}</p>
-              <ul class="text-sm text-gray-600 space-y-1">
-                ${q.options.map((opt, i) => `
-                  <li class="${i === q.correct ? 'text-green-600 font-semibold' : ''}">
-                    ${String.fromCharCode(65 + i)}. ${escapeHtml(opt)} ${i === q.correct ? '(✓ Jawaban Benar)' : ''}
-                  </li>
-                `).join('')}
-              </ul>
-            </div>
-            <button onclick="removeQuestion(${index})" class="text-red-500 hover:text-red-700 text-xl" title="Hapus soal">🗑️</button>
+      container.innerHTML = customQuestions.map((q, i) => `
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-2">
+          <div class="flex justify-between">
+            <div class="flex-1"><p class="font-bold text-gray-900">Q${i + 1} (${q.timer}s)</p>
+            <p class="text-sm text-gray-700">${escapeHtml(q.question)}</p></div>
+            <button onclick="removeQuestion(${i})" class="text-red-600 hover:text-red-800">✕</button>
           </div>
         </div>
       `).join('');
     }
 
     function removeQuestion(index) {
-      if (confirm('Hapus soal ini?')) {
-        customQuestions.splice(index, 1);
-        updateQuestionList();
-      }
+      customQuestions.splice(index, 1);
+      updateQuestionList();
     }
 
-    // ======= UI: BUTTON HANDLERS & LISTENERS =======
     function attachUiListeners() {
-      // Send Chat
       byId('sendChatBtn').addEventListener('click', () => {
-        const input = byId('chatInput');
-        const message = input.value.trim();
-        if (message === '') return;
-        sendMessage('send-chat', { roomCode, message });
-        input.value = '';
+        const msg = byId('chatInput').value.trim();
+        if (msg) {
+          sendMessage('send-chat', { roomCode, message: msg });
+          byId('chatInput').value = '';
+        }
       });
 
-      // Enter untuk chat
-      byId('chatInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') byId('sendChatBtn').click(); });
+      byId('chatInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') byId('sendChatBtn').click();
+      });
 
-      // Question Creation
-      byId('createQuestionBtn').addEventListener('click', showQuestionModal);
-      byId('cancelQuestionBtn').addEventListener('click', hideQuestionModal);
-      byId('questionForm').addEventListener('submit', saveQuestion);
+      byId('createQuestionBtn')?.addEventListener('click', showQuestionModal);
+      byId('cancelQuestionBtn')?.addEventListener('click', hideQuestionModal);
+      byId('questionForm')?.addEventListener('submit', saveQuestion);
 
-      // Start Quiz (Host only)
-      byId('startQuizBtn').addEventListener('click', () => {
+      byId('startQuizBtn')?.addEventListener('click', () => {
         if (customQuestions.length === 0) {
-          alert('Buat setidaknya 1 soal terlebih dahulu!');
+          alert('Create at least 1 question');
           return;
         }
-        if (confirm('Mulai quiz sekarang?')) {
-          const payload = customQuestions.length > 0 ? { roomCode, questions: customQuestions } : { roomCode };
-          sendMessage('start-quiz', payload);
-          byId('startQuizBtn').disabled = true;
-        }
+        sendMessage('start-quiz', { roomCode, questions: customQuestions });
       });
 
-      // Next Question (Host only) - only wire if element exists
-      const nextBtn = byId('nextQuestionBtn');
-      if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-          sendMessage('next-question', { roomCode });
-          const hostBtn = byId('hostNextBtn');
-          if (hostBtn) hostBtn.classList.add('hidden');
-        });
-      }
-
-      // View Review
-      byId('viewReviewBtn').addEventListener('click', () => {
-        // Set manual flag immediately so we don't get the review closed by concurrent messages
+      byId('viewReviewBtn')?.addEventListener('click', () => {
         manualReviewOpen = true;
         sendMessage('get-my-review', { roomCode });
       });
 
-      // Back to Leaderboard
-      byId('backToLeaderboardBtn').addEventListener('click', () => {
+      byId('backToLeaderboardBtn')?.addEventListener('click', () => {
         manualReviewOpen = false;
         switchState('finished');
       });
 
-      // Leave Room
       byId('leaveRoomBtn').addEventListener('click', () => {
-        if (confirm('Yakin ingin keluar dari room?')) {
+        if (confirm('Leave room?')) {
           localStorage.removeItem('currentRoomCode');
           localStorage.removeItem('isHost');
           window.location.href = '/lobby.html';
@@ -1051,21 +714,17 @@
       });
     }
 
-    // ======= START =======
     document.addEventListener('DOMContentLoaded', () => {
       init();
       attachUiListeners();
-
-      // Periodic sync to ensure player list is up to date
       setInterval(() => {
-        // If user opened review manually, pause periodic room-data to avoid forcing UI changes
-        if (manualReviewOpen) return;
-        if (ws && ws.readyState === WebSocket.OPEN) {
+        if (!manualReviewOpen && ws && ws.readyState === WebSocket.OPEN) {
           sendMessage('get-room-data', { roomCode, username });
         }
-      }, 5000); // Every 5 seconds
+      }, 5000);
     });
   </script>
+
 </body>
 
 </html>
