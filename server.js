@@ -5,6 +5,8 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
+const multer = require('multer');
+const xlsx = require('xlsx');
 require('dotenv').config();
 
 // ===================================
@@ -87,6 +89,87 @@ const QUESTION_TRANSITION_DELAY = 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
+
+// Multer (memory storage) untuk upload file sementara
+const upload = multer({ storage: multer.memoryStorage() });
+
+// API: Upload questions (Excel/CSV) - only host can upload for a room
+app.post('/api/upload-questions', upload.single('file'), (req, res) => {
+  try {
+    const file = req.file;
+    const { roomCode, clientId } = req.body || {};
+
+    if (!file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+    if (!roomCode) return res.status(400).json({ success: false, message: 'Missing roomCode' });
+    if (!clientId) return res.status(400).json({ success: false, message: 'Missing clientId' });
+
+    const room = rooms[roomCode];
+    if (!room) return res.status(404).json({ success: false, message: 'Room not found' });
+
+    // Verify uploader is host of the room
+    if (room.host !== clientId) {
+      return res.status(403).json({ success: false, message: 'Only host can upload questions' });
+    }
+
+    // Parse file buffer with xlsx
+    const workbook = xlsx.read(file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const rows = xlsx.utils.sheet_to_json(sheet, { defval: '' });
+
+    const parsedQuestions = [];
+
+    // Expected columns: question, optionA, optionB, optionC, optionD, correct, timer
+    rows.forEach((r, idx) => {
+      const questionText = (r.question || r.Question || r['Question'] || '').toString().trim();
+      const optA = (r.optionA || r.OptionA || r['A'] || r['option A'] || r['Option A'] || r['OptionA'] || '').toString().trim();
+      const optB = (r.optionB || r.OptionB || r['B'] || r['option B'] || r['Option B'] || r['OptionB'] || '').toString().trim();
+      const optC = (r.optionC || r.OptionC || r['C'] || r['option C'] || r['Option C'] || r['OptionC'] || '').toString().trim();
+      const optD = (r.optionD || r.OptionD || r['D'] || r['option D'] || r['Option D'] || r['OptionD'] || '').toString().trim();
+      let correct = r.correct ?? r.Correct ?? r['Correct'] ?? r.answer ?? r.Answer ?? '';
+      let timer = r.timer ?? r.Timer ?? r['Time'] ?? r['time'] ?? 15;
+
+      if (!questionText) return; // skip empty rows
+
+      // Normalize correct: allow 'A'/'B'/'C'/'D' or 0-3
+      if (typeof correct === 'string') {
+        correct = correct.trim().toUpperCase();
+        if (['A','B','C','D'].includes(correct)) {
+          correct = ['A','B','C','D'].indexOf(correct);
+        } else if (!isNaN(Number(correct))) {
+          correct = parseInt(correct, 10);
+        } else {
+          correct = 0;
+        }
+      } else if (typeof correct === 'number') {
+        correct = parseInt(correct, 10);
+      } else {
+        correct = 0;
+      }
+
+      timer = parseInt(timer, 10) || 15;
+
+      const questionObj = {
+        question: questionText,
+        options: [optA || 'A', optB || 'B', optC || 'C', optD || 'D'],
+        correct: Math.max(0, Math.min(3, correct || 0)),
+        timer: Math.max(10, Math.min(300, timer))
+      };
+
+      parsedQuestions.push(questionObj);
+    });
+
+    if (parsedQuestions.length === 0) {
+      return res.status(400).json({ success: false, message: 'No valid questions found in file' });
+    }
+
+    // Return parsed questions to client (client will add to room via start-quiz)
+    return res.json({ success: true, questions: parsedQuestions });
+  } catch (err) {
+    console.error('❌ Error parsing uploaded questions:', err.message);
+    return res.status(500).json({ success: false, message: 'Failed to parse file' });
+  }
+});
 
 // ===================================
 // EXPRESS ROUTES

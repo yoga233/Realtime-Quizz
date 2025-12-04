@@ -105,6 +105,10 @@
                 class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
                 + Buat Pertanyaan
               </button>
+                <label class="flex items-center gap-2">
+                  <input id="excelInput" type="file" accept=".xlsx,.xls,.csv" class="hidden" />
+                  <button id="chooseExcelBtn" type="button" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Upload Excel</button>
+                </label>
               <button id="startQuizBtn"
                 class="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors">
                 Mulai Kuis
@@ -686,6 +690,49 @@
       byId('createQuestionBtn')?.addEventListener('click', showQuestionModal);
       byId('cancelQuestionBtn')?.addEventListener('click', hideQuestionModal);
       byId('questionForm')?.addEventListener('submit', saveQuestion);
+
+      // Excel upload handlers (host only)
+      const excelInput = byId('excelInput');
+      const chooseExcelBtn = byId('chooseExcelBtn');
+
+      chooseExcelBtn?.addEventListener('click', () => excelInput?.click());
+
+      excelInput?.addEventListener('change', async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        if (!confirm('Upload soal dari file Excel/CSV?')) return;
+
+        const form = new FormData();
+        form.append('file', file);
+        form.append('roomCode', roomCode);
+        form.append('clientId', clientId || '');
+
+        try {
+          chooseExcelBtn.disabled = true;
+          chooseExcelBtn.textContent = 'Mengunggah...';
+
+          const resp = await fetch('/api/upload-questions', { method: 'POST', body: form });
+          const data = await resp.json();
+
+          if (!data.success) {
+            alert('Gagal memuat soal: ' + (data.message || 'Unknown'));
+            return;
+          }
+
+          // Replace customQuestions with uploaded ones
+          customQuestions = (data.questions || []).map(q => ({ question: q.question, options: q.options, correct: q.correct, timer: q.timer }));
+          updateQuestionList();
+          alert('Soal berhasil diunggah dan dimuat. Periksa list soal.');
+        } catch (err) {
+          console.error('Upload error:', err);
+          alert('Terjadi kesalahan saat mengunggah.');
+        } finally {
+          chooseExcelBtn.disabled = false;
+          chooseExcelBtn.textContent = 'Upload Excel';
+          excelInput.value = '';
+        }
+      });
 
       byId('startQuizBtn')?.addEventListener('click', () => {
         if (customQuestions.length === 0) {
